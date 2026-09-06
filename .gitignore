@@ -1,1 +1,16 @@
 .DS_Store
+
+# Compiler files
+contracts/cache/
+contracts/out/
+
+# Ignores development broadcast logs
+!/broadcast
+contracts/broadcast/*/31337/
+contracts/broadcast/**/dry-run/
+
+# Dotenv file
+.env
+
+# Soldeer
+contracts/dependencies
