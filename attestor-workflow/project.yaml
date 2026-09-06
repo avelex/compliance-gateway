@@ -1,0 +1,17 @@
+# ==========================================================================
+# CRE PROJECT SETTINGS FILE
+# ==========================================================================
+staging-settings:
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia-base-1
+      url: https://sepolia.base.org
+    # Arc testnet RPC — confirm the chain-selectors registry name and a real
+    # RPC endpoint before deploying; not filled in to avoid guessing either.
+    # - chain-name: <arc-testnet-chain-name>
+    #   url: <arc-testnet-rpc-url>
+
+# ==========================================================================
+production-settings:
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia-base-1
+      url: https://sepolia.base.org
