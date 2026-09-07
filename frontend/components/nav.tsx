@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
+  { href: "/wallet", label: "Wallet" },
   { href: "/gateways", label: "Gateways" },
   { href: "/payments", label: "Payments" },
   { href: "/attestations", label: "Attestations" },
@@ -12,7 +13,7 @@ const items = [
 export function Nav() {
   const path = usePathname();
   return (
-    <nav className="mt-4 flex flex-row gap-6 md:mt-8 md:flex-col md:gap-0">
+    <nav className="flex flex-row gap-6 md:flex-col md:gap-0">
       {items.map((i) => {
         const active = path.startsWith(i.href);
         return (

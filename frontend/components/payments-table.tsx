@@ -3,7 +3,14 @@
 import { useId, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { byslug, money, payments, short, type Status } from "@/lib/data";
-import { ErrorNote, ScrollRegion, StatusMark, Td, Th } from "@/components/ui";
+import {
+  ErrorNote,
+  ScrollRegion,
+  StatusMark,
+  Td,
+  Th,
+  TxLink,
+} from "@/components/ui";
 import { Elapsed } from "@/components/elapsed";
 
 const FILTERS: { v: Status | "all"; label: string }[] = [
@@ -24,7 +31,9 @@ export function PaymentsTable() {
 
   const filtered = status !== "all" || gate !== "all";
   const rows = payments.filter(
-    (p) => (status === "all" || p.status === status) && (gate === "all" || p.gateway === gate),
+    (p) =>
+      (status === "all" || p.status === status) &&
+      (gate === "all" || p.gateway === gate),
   );
 
   async function refresh() {
@@ -32,10 +41,16 @@ export function PaymentsTable() {
     setFailed(false);
     try {
       await new Promise((ok, no) =>
-        setTimeout(() => (params.get("fail") === "refresh" ? no(new Error()) : ok(null)), 700),
+        setTimeout(
+          () => (params.get("fail") === "refresh" ? no(new Error()) : ok(null)),
+          700,
+        ),
       );
       setUpdatedAt(
-        new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       );
     } catch {
       setFailed(true);
@@ -54,7 +69,9 @@ export function PaymentsTable() {
               onClick={() => setStatus(f.v)}
               aria-pressed={status === f.v}
               className={`h-8 rounded-xs px-3 text-[13px] transition-colors ${
-                status === f.v ? "bg-ink text-white" : "text-slate hover:text-ink"
+                status === f.v
+                  ? "bg-ink text-white"
+                  : "text-slate hover:text-ink"
               }`}
             >
               {f.label}
@@ -94,7 +111,9 @@ export function PaymentsTable() {
         )}
 
         <div className="ml-auto flex items-center gap-3">
-          <span className="tnum text-[12.5px] text-slate">Updated {updatedAt}</span>
+          <span className="tnum text-[12.5px] text-slate">
+            Updated {updatedAt}
+          </span>
           <button
             onClick={refresh}
             disabled={busy}
@@ -108,8 +127,8 @@ export function PaymentsTable() {
       {failed && (
         <div className="mt-5">
           <ErrorNote onRetry={refresh}>
-            Could not reach the network. The payments below are from {updatedAt} and may be
-            out of date.
+            Could not reach the network. The payments below are from {updatedAt}{" "}
+            and may be out of date.
           </ErrorNote>
         </div>
       )}
@@ -135,9 +154,13 @@ export function PaymentsTable() {
                       <span className="tnum">{p.time}</span>
                       <div className="text-[12px] text-slate">{p.date}</div>
                     </Td>
-                    <Td className="font-mono text-[12.5px]">{short(p.payer, 10, 6)}</Td>
+                    <Td className="font-mono text-[12.5px]">
+                      {short(p.payer, 10, 6)}
+                    </Td>
                     <Td>
-                      <span className="block max-w-[22ch] truncate">{g.name}</span>
+                      <span className="block max-w-[22ch] truncate">
+                        {g.name}
+                      </span>
                       <div className="text-[12px] text-slate">{g.token}</div>
                     </Td>
                     <Td right className="tnum whitespace-nowrap">
@@ -150,15 +173,12 @@ export function PaymentsTable() {
                           <Elapsed since={p.openedAgo} />
                         </div>
                       )}
-                      {p.note && <div className="mt-1 text-[12px] text-slate">{p.note}</div>}
-                      <a
-                        href={`https://sepolia.basescan.org/tx/${p.tx}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-block text-[12px] text-slate underline underline-offset-2 hover:text-ink"
-                      >
-                        View transaction
-                      </a>
+                      {p.note && (
+                        <div className="mt-1 text-[12px] text-slate">
+                          {p.note}
+                        </div>
+                      )}
+                      <TxLink tx={p.tx} />
                     </Td>
                   </tr>
                 );
@@ -183,8 +203,9 @@ export function PaymentsTable() {
         <div className="mt-8 max-w-[52ch]">
           <p className="text-[15px]">No payments yet.</p>
           <p className="mt-1 text-slate">
-            Payments appear here the moment a customer opens one of your gateway links. Copy a
-            link from a gateway&rsquo;s Overview to take your first one.
+            Payments appear here the moment a customer opens one of your gateway
+            links. Copy a link from a gateway&rsquo;s Overview to take your
+            first one.
           </p>
         </div>
       )}

@@ -43,6 +43,7 @@ Three rules the screens follow:
 
 | Route | Spec |
 |---|---|
+| `/wallet` | settlement balance, funds held in screening, recent settlements |
 | `/checkout` | §3 — requirements before the amount, daily allowance, both waits named, two screening layers, reclaim countdown |
 | `/gateways` | §4.1 |
 | `/gateways/new` | §4.2 — the same component renders as the empty state of the list |
@@ -62,9 +63,10 @@ Failure paths are real code, wired to a mock that fails on a query param:
 | `/gateways/new?fail=deploy` then Deploy | failed deployment, choices preserved |
 | `/gateways/0x2c91?deployed=1` | the post-deploy success moment |
 
-Monitoring has three renderings driven by `heartbeatMinutesAgo` in `lib/data.ts`: under an
-hour is live, over an hour is late, over 48 hours is dead. Set it to `3000` to see the dead
-state — the one the README's "a broken system must not look like a clean one" is about.
+Monitoring is silent while healthy and only surfaces when it is not: over an hour shows a
+"late" banner above the page, over 48 hours a "dead" one. Both are driven by
+`heartbeatMinutesAgo` in `lib/data.ts` — set it to `3000` to see the dead state, the one the
+project README's "a broken system must not look like a clean one" is about.
 
 ## Wiring left to do
 
@@ -81,3 +83,6 @@ Ordered as in `SPEC.md` §12.
   derives from payment rows and needs no change once those are live.
 - Route handlers under `app/api/` — none exist yet.
 - Gateway names in `localStorage` (§6); routes already key on the address.
+- `components/account-menu.tsx` `Sign out` → Privy's logout. The menu uses the native popover
+  API, so light-dismiss, Escape and focus already come from the platform.
+- `app/(dashboard)/wallet/page.tsx` `WALLET` / `BALANCE` → the Privy org wallet and its balance.

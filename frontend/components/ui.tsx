@@ -108,6 +108,19 @@ export function ScrollRegion({
   );
 }
 
+export function TxLink({ tx }: { tx: string }) {
+  return (
+    <a
+      href={`https://sepolia.basescan.org/tx/${tx}`}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-1 block w-fit text-[12px] text-slate underline underline-offset-2 hover:text-ink"
+    >
+      View transaction
+    </a>
+  );
+}
+
 export function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="py-3.5">
