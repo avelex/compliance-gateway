@@ -21,10 +21,10 @@ export function AccountMenu({
     <>
       <button
         popoverTarget={id}
-        className="flex items-center gap-2 rounded-xs py-1 pr-1 pl-2 text-[13px] transition-colors hover:bg-wash"
+        className="flex items-center gap-2 rounded-xs py-1 pr-1 pl-2 text-[13px] text-white transition-colors hover:bg-white/12"
       >
         <span className="hidden sm:inline">{org}</span>
-        <span className="flex size-7 items-center justify-center rounded-full border border-rule">
+        <span className="flex size-7 items-center justify-center rounded-full border border-white/38">
           <AccountIcon />
         </span>
         <span className="sr-only">Account menu</span>

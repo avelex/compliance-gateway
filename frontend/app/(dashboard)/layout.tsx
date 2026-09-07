@@ -7,8 +7,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const state = liveness(heartbeatMinutesAgo);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex h-13 shrink-0 items-center justify-between border-b border-rule px-4 md:px-8">
+    <div className="flex min-h-screen flex-col md:h-screen md:min-h-0 md:overflow-hidden">
+      <header className="flex h-13 shrink-0 items-center justify-between bg-ink px-4 text-white md:px-8">
         <Link href="/gateways" className="display text-[15px] font-semibold tracking-tight">
           ComplianceGateway
         </Link>
@@ -19,18 +19,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       </header>
 
-      <div className="flex flex-1 flex-col md:flex-row">
-        <aside className="shrink-0 border-b border-rule px-5 py-4 md:w-[212px] md:border-r md:border-b-0 md:py-6">
+      <div className="flex flex-1 flex-col md:min-h-0 md:flex-row">
+        <aside className="shrink-0 border-b border-rule px-5 py-4 md:w-[212px] md:overflow-y-auto md:border-r md:border-b-0 md:py-6">
           <Nav />
         </aside>
 
-        <main className="min-w-0 flex-1 px-6 py-8 md:px-10 md:py-9">
-          {state !== "live" && (
-            <div className="mb-8">
-              <MonitoringAlert state={state} minutesAgo={heartbeatMinutesAgo} />
-            </div>
-          )}
-          {children}
+        <main className="min-w-0 flex-1 px-6 pb-11 md:overflow-y-auto md:px-10">
+          <div className="scroll-rail">
+            <span />
+          </div>
+          <div className="pt-8 md:pt-9">
+            {state !== "live" && (
+              <div className="mb-8">
+                <MonitoringAlert state={state} minutesAgo={heartbeatMinutesAgo} />
+              </div>
+            )}
+            {children}
+          </div>
         </main>
       </div>
     </div>

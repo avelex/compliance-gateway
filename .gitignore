@@ -17,3 +17,7 @@ contracts/dependencies
 .impeccable
 
 frontend/SPEC.md
+frontend/DESIGN.md
+frontend/PRODUCT.md
+node_modules
+.next

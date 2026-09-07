@@ -78,3 +78,43 @@ fieldset:disabled select {
 
 /* Scroll containers must be reachable without a mouse. */
 [data-scroll-region]:focus-visible { outline-offset: -2px; }
+
+/* The shell is fixed and only <main> scrolls, so the travel needs a mark of its own:
+   blue for distance covered, and a hairline that only appears once you leave the top. */
+.scroll-rail {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 3px;
+  margin-inline: -24px;
+  background: var(--color-paper);
+}
+
+.scroll-rail::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: var(--color-rule);
+  opacity: 0;
+  animation: rail-settle linear both;
+  animation-timeline: scroll(nearest);
+  animation-range: 0 72px;
+}
+
+.scroll-rail > span {
+  display: block;
+  height: 3px;
+  background: var(--color-blue);
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: rail-progress linear both;
+  animation-timeline: scroll(nearest);
+}
+
+@media (min-width: 768px) {
+  .scroll-rail { margin-inline: -40px; }
+}
+
+@keyframes rail-progress { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes rail-settle  { from { opacity: 0 }         to { opacity: 1 } }
