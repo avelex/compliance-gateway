@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper:      #FFFFFF;
+  --color-ink:        #05070E;
+  --color-slate:      #5A6478;
+  --color-rule:       #E3E7EF;
+  --color-blue:       #1750F0;
+  --color-blue-deep:  #0B34B4;
+  --color-wash:       #EDF1FF;
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-xs: 3px;
+}
+
+:root { color-scheme: light; }
+
+html { -webkit-font-smoothing: antialiased; }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Display type uses Archivo's width axis; body stays at normal width. */
+.display {
+  font-variation-settings: "wdth" 108;
+  letter-spacing: -0.021em;
+  line-height: 1.08;
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Returned funds: not an error, a completed round trip. Read by texture, not alarm colour. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-rule) 0 1px,
+    transparent 1px 5px
+  );
+}
+
+@keyframes breathe { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+.breathe { animation: breathe 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .breathe { animation: none; opacity: .55 }
+  * { transition-duration: .01ms !important }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection { background: var(--color-blue); color: #fff; }
+
+table { border-collapse: collapse; width: 100%; }

@@ -130,6 +130,7 @@ expiry date. No name, no country, no document, no risk score.
   Sumsub session.
 - [ ] Sumsub Reusable KYC across businesses.
 - [ ] Multi-token gateways (per-token decimals, fee-on-transfer accounting, reentrancy).
+- [ ] Whitelist payment tokens in `GatewayFactory` — `deploy()` currently takes any ERC20 from calldata; only USDC/EURC are offered in the UI.
 - [ ] Production Sumsub keys; BYOK AML aggregators above ~50k checks/month.
 - [ ] Fiat off-ramp
 - [ ] Cross-chain payment router.

@@ -1,0 +1,34 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const items = [
+  { href: "/gateways", label: "Gateways" },
+  { href: "/payments", label: "Payments" },
+  { href: "/attestations", label: "Attestations" },
+];
+
+export function Nav() {
+  const path = usePathname();
+  return (
+    <nav className="mt-4 flex flex-row gap-6 md:mt-8 md:flex-col md:gap-0">
+      {items.map((i) => {
+        const active = path.startsWith(i.href);
+        return (
+          <Link
+            key={i.href}
+            href={i.href}
+            className={`py-1.5 text-[13.5px] transition-colors md:-ml-5 md:border-l-2 md:pl-[18px] ${
+              active
+                ? "font-medium text-ink md:border-ink"
+                : "text-slate hover:text-ink md:border-transparent"
+            }`}
+          >
+            {i.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
