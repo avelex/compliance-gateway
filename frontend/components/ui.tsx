@@ -45,15 +45,67 @@ export function Button({
   variant?: "primary" | "quiet";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  // A disabled control the merchant stares at during a deploy must still be readable:
+  // opacity on a blue fill lands near 2:1.
   const base =
-    "inline-flex h-9 items-center justify-center rounded-xs px-3.5 text-[13px] font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none";
+    "inline-flex min-h-9 items-center justify-center rounded-xs px-3.5 py-1.5 text-[13px] font-medium transition-colors disabled:pointer-events-none";
   const look =
     variant === "primary"
-      ? "bg-blue text-white hover:bg-blue-deep"
-      : "border border-rule text-ink hover:border-ink";
+      ? "bg-blue text-white hover:bg-blue-deep disabled:bg-rule disabled:text-slate"
+      : "border border-rule text-ink hover:border-ink disabled:text-slate";
   const cn = `${base} ${look} ${className}`;
   if (href) return <Link href={href} className={cn}>{children}</Link>;
   return <button className={cn} {...rest}>{children}</button>;
+}
+
+/** Names what went wrong and how to get out of it. Alert colour is reserved for
+ *  the system failing — never for a payment that was returned. */
+export function ErrorNote({
+  children,
+  onRetry,
+  retryLabel = "Try again",
+}: {
+  children: React.ReactNode;
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
+  return (
+    <div role="alert" className="border border-alert bg-alert-wash px-4 py-3">
+      <p className="max-w-[54ch] text-[13px] text-ink">{children}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 text-[13px] text-alert underline underline-offset-2"
+        >
+          {retryLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** overflow-x-auto is unreachable without a mouse unless it can take focus. */
+export function ScrollRegion({
+  label,
+  className = "",
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      data-scroll-region
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+      className={`overflow-x-auto ${className}`}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function Meta({ label, children }: { label: string; children: React.ReactNode }) {

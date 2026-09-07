@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button, ErrorNote } from "@/components/ui";
 import { SYMBOL, type Token } from "@/lib/data";
 
 type Kind = "screening" | "regulated";
@@ -33,90 +33,168 @@ const KINDS: Record<Kind, { title: string; blurb: string; rows: [string, string]
 };
 
 export function Wizard() {
-  const [kind, setKind] = useState<Kind>("regulated");
-  const [token, setToken] = useState<Token>("USDC");
-  const [state, setState] = useState<"idle" | "deploying">("idle");
   const router = useRouter();
+  const params = useSearchParams();
+  const [kind, setKind] = useState<Kind | null>(null);
+  const [token, setToken] = useState<Token>("USDC");
+  const [step, setStep] = useState<"edit" | "confirm" | "deploying">("edit");
+  const [failed, setFailed] = useState(false);
 
-  function deploy() {
-    setState("deploying");
-    setTimeout(() => router.push("/gateways/0x2c91"), 1400);
+  async function deploy() {
+    setStep("deploying");
+    setFailed(false);
+    try {
+      await new Promise((ok, no) =>
+        setTimeout(() => (params.get("fail") === "deploy" ? no(new Error()) : ok(null)), 1400),
+      );
+      router.push("/gateways/0x2c91?deployed=1");
+    } catch {
+      setFailed(true);
+      setStep("edit");
+    }
   }
+
+  const chosen = kind ? KINDS[kind] : null;
 
   return (
     <div className="mt-10 space-y-10">
-      <section>
-        <h2 className="text-[15px] font-medium">What kind of business is this?</h2>
+      <fieldset disabled={step !== "edit"}>
+        <legend className="text-[15px] font-medium">What kind of business is this?</legend>
+        <p className="mt-1.5 max-w-[56ch] text-[13px] text-slate">
+          You can change this after deployment, but loosening it needs a second approval.
+        </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {(Object.keys(KINDS) as Kind[]).map((k) => {
             const on = kind === k;
             return (
-              <button
+              <label
                 key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                aria-pressed={on}
-                className={`rounded-xs border p-4 text-left transition-colors ${
+                className={`cursor-pointer rounded-xs border p-4 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue ${
                   on ? "border-ink bg-wash" : "border-rule hover:border-slate"
                 }`}
               >
-                <div className="text-[14.5px] font-medium">{KINDS[k].title}</div>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-slate">{KINDS[k].blurb}</p>
-                <dl className="mt-4 space-y-1.5 border-t border-rule pt-3">
+                <input
+                  type="radio"
+                  name="business-kind"
+                  value={k}
+                  checked={on}
+                  onChange={() => setKind(k)}
+                  className="sr-only"
+                />
+                <span className="block text-[14.5px] font-medium">{KINDS[k].title}</span>
+                <span className="mt-1.5 block text-[13px] leading-relaxed text-slate">
+                  {KINDS[k].blurb}
+                </span>
+                <span className="mt-4 block space-y-1.5 border-t border-rule pt-3">
                   {KINDS[k].rows.map(([l, v]) => (
-                    <div key={l} className="flex justify-between gap-4 text-[12.5px]">
-                      <dt className="text-slate">{l}</dt>
-                      <dd className="tnum">
+                    <span key={l} className="flex justify-between gap-4 text-[12.5px]">
+                      <span className="text-slate">{l}</span>
+                      <span className="tnum">
                         {l === "Threshold" && v !== "Not used" ? SYMBOL[token] + v : v}
-                      </dd>
-                    </div>
+                      </span>
+                    </span>
                   ))}
-                </dl>
-              </button>
+                </span>
+              </label>
             );
           })}
         </div>
-      </section>
+      </fieldset>
 
-      <section>
-        <h2 className="text-[15px] font-medium">Which token do you settle in?</h2>
+      <fieldset disabled={step !== "edit"}>
+        <legend className="text-[15px] font-medium">Which token do you settle in?</legend>
         <div className="mt-4 flex gap-2">
           {(["USDC", "EURC"] as Token[]).map((t) => (
-            <button
+            <label
               key={t}
-              type="button"
-              onClick={() => setToken(t)}
-              aria-pressed={token === t}
-              className={`h-9 rounded-xs border px-4 text-[13px] transition-colors ${
+              className={`cursor-pointer rounded-xs border px-4 text-[13px] leading-9 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue ${
                 token === t ? "border-ink bg-ink text-white" : "border-rule hover:border-slate"
               }`}
             >
+              <input
+                type="radio"
+                name="token"
+                value={t}
+                checked={token === t}
+                onChange={() => setToken(t)}
+                className="sr-only"
+              />
               {t}
-            </button>
+            </label>
           ))}
         </div>
         <p className="mt-3 max-w-[52ch] text-[12.5px] text-slate">
-          A gateway settles one token, and that cannot be changed after deployment. To take both,
-          deploy a second gateway.
+          A gateway settles one token, and that cannot be changed after deployment. To take
+          both, deploy a second gateway.
         </p>
-      </section>
+      </fieldset>
 
       <section className="border-t border-ink pt-6">
+        {failed && (
+          <div className="mb-6">
+            <ErrorNote onRetry={deploy} retryLabel="Try deploying again">
+              The gateway was not deployed. Nothing was created and nothing was spent, and
+              your choices above are still here.
+            </ErrorNote>
+          </div>
+        )}
+
         <dl className="grid gap-x-10 gap-y-3 sm:grid-cols-2">
           <Line label="Network" value="Base Sepolia" />
           <Line label="Token" value={token} />
           <Line label="Settles to" value="0x9E44…7f30" mono />
           <Line label="Gas" value="Covered for you" />
+          <Line
+            label="Policy"
+            value={chosen ? chosen.title : "Choose a business type above"}
+          />
+          <Line
+            label="Asks payers for"
+            value={
+              chosen
+                ? chosen.rows[0][1] === "No identity check"
+                  ? "Nothing — screening only"
+                  : `${chosen.rows[0][1]} under ${SYMBOL[token]}1,000, ${chosen.rows[1][1].toLowerCase()} above`
+                : "—"
+            }
+          />
         </dl>
 
-        <div className="mt-7 flex items-center gap-4">
-          <Button onClick={deploy} disabled={state === "deploying"}>
-            {state === "deploying" ? "Deploying…" : "Deploy gateway"}
-          </Button>
-          <span className="text-[12.5px] text-slate">
-            {state === "deploying" ? "Waiting for the transaction to confirm" : "Takes about 5 seconds"}
-          </span>
-        </div>
+        {step === "confirm" ? (
+          <div role="status" className="mt-7 border border-rule bg-wash p-4">
+            <h3 className="text-[14px] font-medium">Deploy this gateway?</h3>
+            <p className="mt-1 max-w-[54ch] text-[13px] text-slate">
+              It settles in <strong className="font-medium text-ink">{token}</strong>, and that
+              cannot be changed later — a different token means a second gateway. Payers will be
+              asked for{" "}
+              <strong className="font-medium text-ink">
+                {chosen!.rows[0][1] === "No identity check"
+                  ? "nothing beyond fund screening"
+                  : `a ${chosen!.rows[0][1].toLowerCase()}, or a ${chosen!.rows[1][1].toLowerCase()} at ${SYMBOL[token]}1,000 and above`}
+              </strong>
+              . The policy is editable afterwards; the token is not.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button onClick={deploy}>Deploy in {token}</Button>
+              <Button variant="quiet" onClick={() => setStep("edit")}>
+                Go back
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Button onClick={() => setStep("confirm")} disabled={!kind || step === "deploying"}>
+              {step === "deploying" ? "Deploying…" : "Review and deploy"}
+            </Button>
+            <span className="text-[12.5px] text-slate">
+              {step === "deploying"
+                ? "Waiting for the transaction to confirm"
+                : kind
+                  ? "One transaction, about 5 seconds."
+                  : "Choose a business type to continue."}
+            </span>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -125,8 +203,10 @@ export function Wizard() {
 function Line({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-6 border-b border-rule pb-2.5">
-      <dt className="text-[13px] text-slate">{label}</dt>
-      <dd className={`text-[13px] ${mono ? "font-mono text-[12.5px]" : ""}`}>{value}</dd>
+      <dt className="shrink-0 text-[13px] text-slate">{label}</dt>
+      <dd className={`text-right text-[13px] ${mono ? "font-mono text-[12.5px]" : ""}`}>
+        {value}
+      </dd>
     </div>
   );
 }

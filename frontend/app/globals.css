@@ -8,6 +8,10 @@
   --color-blue:       #1750F0;
   --color-blue-deep:  #0B34B4;
   --color-wash:       #EDF1FF;
+  /* Reserved for one meaning only: the system itself is broken.
+     A returned payment is the gateway working, and never uses this. */
+  --color-alert:      #B01427;
+  --color-alert-wash: #FDF0F1;
 
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
@@ -62,3 +66,15 @@ body {
 ::selection { background: var(--color-blue); color: #fff; }
 
 table { border-collapse: collapse; width: 100%; }
+
+/* A locked control has to read as locked, not merely refuse the click. */
+fieldset:disabled input,
+fieldset:disabled select {
+  background: #F6F7FA;
+  color: var(--color-slate);
+  border-color: var(--color-rule);
+  cursor: not-allowed;
+}
+
+/* Scroll containers must be reachable without a mouse. */
+[data-scroll-region]:focus-visible { outline-offset: -2px; }

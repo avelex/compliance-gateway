@@ -19,6 +19,7 @@ export function Nav() {
           <Link
             key={i.href}
             href={i.href}
+            aria-current={active ? "page" : undefined}
             className={`py-1.5 text-[13.5px] transition-colors md:-ml-5 md:border-l-2 md:pl-[18px] ${
               active
                 ? "font-medium text-ink md:border-ink"

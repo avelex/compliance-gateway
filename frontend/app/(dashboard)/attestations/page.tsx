@@ -7,10 +7,20 @@ export default function AttestationsPage() {
     <div className="max-w-[880px]">
       <h1 className="display text-[30px] font-semibold">Attestations</h1>
       <p className="mt-2 max-w-[64ch] text-slate">
-        What a verified payer looks like to you: a number, a level, an expiry date. No name, no
-        country, no document. Wallets under one number belong to one person — and that number is
-        yours alone, so nobody can match it against another merchant&rsquo;s.
+        This is everything you learn about a verified payer: a number, a level, an expiry date.
+        Wallets sharing a number are one person. The number is yours alone, so no other merchant
+        can match it against theirs.
       </p>
+
+      {attestations.length === 0 && (
+        <div className="mt-10 max-w-[52ch]">
+          <p className="text-[15px]">No attestations yet.</p>
+          <p className="mt-1 text-slate">
+            A row appears here the first time a payer completes an identity check on one of your
+            gateways. Gateways set to screening only never create any.
+          </p>
+        </div>
+      )}
 
       <div className="mt-10 space-y-9">
         {attestations.map((a) => {

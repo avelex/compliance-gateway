@@ -1,4 +1,5 @@
 import { byslug, gateways } from "@/lib/data";
+import { Suspense } from "react";
 import { GatewayHead } from "@/components/gateway-head";
 import { PolicyForm } from "@/components/policy-form";
 
@@ -12,7 +13,9 @@ export default async function PolicyPage({ params }: { params: Promise<{ slug: s
   return (
     <div className="max-w-[880px]">
       <GatewayHead g={g} tab="policy" />
-      <PolicyForm gateway={g} />
+      <Suspense fallback={<p className="mt-9 text-slate">Loading policy…</p>}>
+        <PolicyForm gateway={g} />
+      </Suspense>
     </div>
   );
 }

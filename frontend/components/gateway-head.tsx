@@ -18,6 +18,7 @@ export function GatewayHead({ g, tab }: { g: Gateway; tab: "overview" | "policy"
           <Link
             key={t.key}
             href={t.href}
+            aria-current={tab === t.key ? "page" : undefined}
             className={`-mb-px border-b-2 pb-2.5 text-[13.5px] transition-colors ${
               tab === t.key ? "border-ink font-medium" : "border-transparent text-slate hover:text-ink"
             }`}
