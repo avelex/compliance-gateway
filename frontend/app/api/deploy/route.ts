@@ -20,12 +20,13 @@ const RECEIPT_TIMEOUT = 20_000;
 /** Deterministic per merchant, and the only thing that proves a policy id the client
  *  handed us belongs to the caller: our key quorum owns these policies, so an
  *  unchecked id would let one merchant widen another's. */
-const policyName = (did: string) => `Compliance Gateway setPolicy for ${did}`;
+const policyName = (did: string) => `CG setPolicy ${did.replace(/^did:privy:/, "")}`;
 
-/** One rule, one merchant: send `setPolicy` to any gateway in `gates`, on Base Sepolia,
- *  carrying no value. `in` over both address spellings because neither Privy's types nor
- *  its docs say whether it compares `to` checksummed or lowercased, or `value`/`chain_id`
- *  as decimal or hex — a wrong guess would deny every setPolicy forever. */
+/** One rule, one merchant: send `setPolicy` to any gateway in `gates`, on Base Sepolia.
+ *  `in` over both spellings because neither Privy's types nor its docs say whether it
+ *  compares `to` checksummed or lowercased, or `chain_id` as decimal or hex — a wrong
+ *  guess would deny every setPolicy forever. The engine accepts `in` on those two; it
+ *  rejects it on `value`, which is why that condition is gone (see below). */
 const rulesFor = (gates: string[]) => [
   {
     name: "setPolicy on this merchant's gateways",
@@ -34,7 +35,11 @@ const rulesFor = (gates: string[]) => [
     conditions: [
       { field_source: "ethereum_transaction" as const, field: "to" as const, operator: "in" as const, value: gates },
       { field_source: "ethereum_transaction" as const, field: "chain_id" as const, operator: "in" as const, value: [String(CHAIN_ID), `0x${CHAIN_ID.toString(16)}`] },
-      { field_source: "ethereum_transaction" as const, field: "value" as const, operator: "in" as const, value: ["0", "0x0", "0x00"] },
+      // No `value` condition: Privy rejects `in` on that field ("Use one of: eq, gt, gte,
+      // lt, lte"), and `eq` would be a bet on an encoding we cannot verify — a wrong guess
+      // denies every setPolicy and looks identical to a missing grant. It is not needed:
+      // MerchantGateway.setPolicy is nonpayable, so the calldata pin below already means a
+      // value-carrying call reverts and the value comes back.
       // Without this the grant covers ANY call to the gateway, including
       // transferOwnership and setForwarderAddress(0) — i.e. the escrowed money.
       { field_source: "ethereum_calldata" as const, field: "function_name", abi: gatewayAbi, operator: "eq" as const, value: "setPolicy" },
