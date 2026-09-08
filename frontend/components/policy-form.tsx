@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
-import { SYMBOL, type Gateway } from "@/lib/data";
+import { usePrivy } from "@privy-io/react-auth";
+import { Button, ErrorNote, TxLink } from "@/components/ui";
+import { SYMBOL, short, type Policy } from "@/lib/data";
+import type { OnChainGateway } from "@/lib/gateways";
+import { useSignerGrant } from "@/components/delegate-panel";
+import { useOrgWallet } from "@/components/login-gate";
 
 const LEVELS = [
   { v: 0, label: "No identity check" },
@@ -16,8 +19,10 @@ const MAX_RISK = 80;
 
 const levelName = (v: number) => LEVELS.find((l) => l.v === v)!.label;
 
-export function PolicyForm({ gateway: g }: { gateway: Gateway }) {
-  const params = useSearchParams();
+export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
+  const { getAccessToken } = usePrivy();
+  const wallet = useOrgWallet();
+  const { granted: canSign, policyId } = useSignerGrant();
   const ids = { below: useId(), above: useId(), threshold: useId(), risk: useId() };
 
   const start = g.policy;
@@ -26,15 +31,16 @@ export function PolicyForm({ gateway: g }: { gateway: Gateway }) {
   const [threshold, setThreshold] = useState(String(start.threshold));
   const [risk, setRisk] = useState(String(start.maxRisk));
 
-  const [pending, setPending] = useState<null | typeof start>(null);
+  const [saved, setSaved] = useState<{ policy: Policy; hash: string; confirmed: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<{ message: string; hash?: string } | null>(null);
   const panel = useRef<HTMLDivElement>(null);
 
-  // A compliance change was requested; a screen reader must land on it, not on <body>.
+  // A compliance change was made; a screen reader must land on the confirmation, not <body>.
   useEffect(() => {
-    if (pending) panel.current?.focus();
-  }, [pending]);
+    if (saved) panel.current?.focus();
+  }, [saved]);
 
   const thresholdNum = Number(threshold);
   const riskNum = Number(risk);
@@ -71,35 +77,44 @@ export function PolicyForm({ gateway: g }: { gateway: Gateway }) {
     thresholdNum !== start.threshold ||
     riskNum !== start.maxRisk;
 
-  const frozen = pending !== null || busy;
+  const frozen = saved !== null || busy;
 
   async function save() {
     setBusy(true);
     setFailed(false);
-    const requested = {
+    setError(null);
+    const requested: Policy = {
       levelBelow: below as 0 | 1 | 2,
       levelAbove: above as 0 | 1 | 2,
       threshold: thresholdNum,
       maxRisk: riskNum,
     };
     try {
-      await new Promise((ok, no) =>
-        setTimeout(() => (params.get("fail") === "save" ? no(new Error()) : ok(null)), 800),
-      );
-      setPending(requested);
-    } catch {
+      const res = await fetch("/api/privy/set-policy", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${await getAccessToken()}`,
+        },
+        body: JSON.stringify({ gate: g.address, policy: requested }),
+      });
+      // A framework-level 500 is HTML, not JSON. Showing the merchant "Unexpected token '<'"
+      // instead of a sentence is what the empty object avoids.
+      const body = await res.json().catch(() => ({}) as Record<string, string>);
+      if (body.status === "confirmed" || body.status === "unconfirmed") {
+        setSaved({ policy: requested, hash: body.hash, confirmed: body.status === "confirmed" });
+      } else {
+        // Ownership/validation/auth failures, a Privy refusal, or a reverted transaction —
+        // all land here. A reverted send still has a hash worth showing.
+        setError({ message: body.error ?? "", hash: body.hash });
+        setFailed(true);
+      }
+    } catch (e) {
+      setError({ message: e instanceof Error ? e.message : "" });
       setFailed(true);
     } finally {
       setBusy(false);
     }
-  }
-
-  function withdraw() {
-    setPending(null);
-    setBelow(start.levelBelow);
-    setAbove(start.levelAbove);
-    setThreshold(String(start.threshold));
-    setRisk(String(start.maxRisk));
   }
 
   return (
@@ -183,59 +198,57 @@ export function PolicyForm({ gateway: g }: { gateway: Gateway }) {
           {failed && (
             <div className="mb-5">
               <ErrorNote onRetry={save}>
-                The change was not submitted. Your policy is unchanged, and the values above
-                are still what you typed.
+                {error?.message ||
+                  "The change was not submitted. Your policy is unchanged, and the values above are still what you typed."}
+                {error?.hash && <TxLink tx={error.hash} />}
               </ErrorNote>
             </div>
           )}
 
-          {pending ? (
+          {saved ? (
             <div
               ref={panel}
               tabIndex={-1}
               role="status"
               className="border border-rule bg-wash p-4 outline-none"
             >
-              <div className="text-[14px] font-medium">Waiting for a second approval</div>
+              <h3 className="text-[14px] font-medium">
+                {saved.confirmed ? "Policy updated" : "Policy change sent"}
+              </h3>
               <p className="mt-1 max-w-[52ch] text-[13px] text-slate">
-                The settings above are locked until this resolves. Loosening a compliance
-                setting needs two people. Nothing changes on chain until
-                Dana approves in Privy.
+                {saved.confirmed
+                  ? "It is on chain now. Payments already in screening keep the policy they started under."
+                  : "It was sent but we could not confirm it in time. Do not retry — check this transaction before trying again."}
               </p>
 
               <dl className="mt-3 space-y-1 text-[13px]">
                 <Diff
                   label="Under the threshold"
                   from={levelName(start.levelBelow)}
-                  to={levelName(pending.levelBelow)}
+                  to={levelName(saved.policy.levelBelow)}
                 />
                 <Diff
                   label="At or above"
                   from={levelName(start.levelAbove)}
-                  to={levelName(pending.levelAbove)}
+                  to={levelName(saved.policy.levelAbove)}
                 />
                 <Diff
                   label="Threshold"
                   from={`${SYMBOL[g.token]}${start.threshold.toLocaleString("en-US")}`}
-                  to={`${SYMBOL[g.token]}${pending.threshold.toLocaleString("en-US")}`}
+                  to={`${SYMBOL[g.token]}${saved.policy.threshold.toLocaleString("en-US")}`}
                 />
                 <Diff
                   label="Risk ceiling"
                   from={String(start.maxRisk)}
-                  to={String(pending.maxRisk)}
+                  to={String(saved.policy.maxRisk)}
                 />
               </dl>
 
-              <button
-                onClick={withdraw}
-                className="mt-3 text-[13px] text-blue underline underline-offset-2 hover:text-blue-deep"
-              >
-                Withdraw the request
-              </button>
+              <TxLink tx={saved.hash} />
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <Button onClick={save} disabled={!dirty || invalid || busy}>
+              <Button onClick={save} disabled={!canSign || !dirty || invalid || busy}>
                 {busy ? "Submitting…" : "Save changes"}
               </Button>
               <span className="max-w-[46ch] text-[12.5px] text-slate">
@@ -243,7 +256,11 @@ export function PolicyForm({ gateway: g }: { gateway: Gateway }) {
                   ? "Nothing to save — the policy on chain matches what is on screen."
                   : invalid
                     ? "Fix the highlighted fields to continue."
-                    : "Payments already in screening keep the policy they started under."}
+                    : !canSign
+                      ? policyId
+                        ? "Grant permission above to save changes."
+                        : "This browser doesn't have your permission id — see above."
+                      : "Payments already in screening keep the policy they started under."}
               </span>
             </div>
           )}
@@ -253,34 +270,61 @@ export function PolicyForm({ gateway: g }: { gateway: Gateway }) {
       <aside className="lg:border-l lg:border-rule lg:pl-8">
         <h2 className="text-[15px] font-medium">Who can change this</h2>
         <p className="mt-1.5 text-[13px] text-slate">
-          Enforced by Privy on the key itself, not by this page.
+          The wallet permission is enforced by Privy on the key itself, not by this page. The
+          policy that defines it is owned by this dashboard&rsquo;s operator, who can widen it
+          without asking you; revoking the permission in Privy is what ends it.
         </p>
         <dl className="mt-5 space-y-3.5 text-[13px]">
           <div>
             <dt className="text-[12.5px] text-slate">Wallet</dt>
-            <dd className="font-mono text-[12.5px]">0x9E44…7f30</dd>
+            <dd className="font-mono text-[12.5px]">
+              {wallet ? short(wallet.address, 6, 4) : "—"}
+            </dd>
           </div>
           <div>
-            <dt className="text-[12.5px] text-slate">May call</dt>
-            <dd>setPolicy, on this gateway only</dd>
+            <dt className="text-[12.5px] text-slate">May send</dt>
+            <dd>
+              {policyId ? (
+                <>
+                  <span className="font-mono text-[12px]">setPolicy</span>, carrying no value,
+                  to the gateways you deployed here
+                  <span className="mt-0.5 block font-mono text-[12px] text-slate">
+                    including {short(g.address, 6, 4)}
+                  </span>
+                </>
+              ) : (
+                "No permission policy exists for this wallet yet"
+              )}
+            </dd>
           </div>
           <div>
-            <dt className="text-[12.5px] text-slate">Signatures required</dt>
-            <dd className="tnum">2 of 3</dd>
+            <dt className="text-[12.5px] text-slate">Permission granted</dt>
+            <dd>{canSign ? "Yes" : "Not yet"}</dd>
           </div>
         </dl>
-        <ul className="mt-5 space-y-2 border-t border-rule pt-4 text-[13px]">
-          {[
-            ["Alex", pending ? "signed" : "—"],
-            ["Dana", pending ? "waiting" : "—"],
-            ["Priya", "—"],
-          ].map(([who, state]) => (
-            <li key={who} className="flex justify-between">
-              <span>{who}</span>
-              <span className={state === "waiting" ? "text-blue" : "text-slate"}>{state}</span>
-            </li>
-          ))}
-        </ul>
+
+        <div className="mt-6 border-t border-rule pt-4">
+          <div className="flex justify-between text-[13px]">
+            <span className="text-slate">Signatures required</span>
+            <span className="tnum">2 of 3</span>
+          </div>
+          <ul className="mt-2 space-y-2 text-[13px]">
+            {[
+              ["Alex", "signed"],
+              ["Dana", "waiting"],
+              ["Priya", "—"],
+            ].map(([who, state]) => (
+              <li key={who} className="flex justify-between">
+                <span className="text-slate">{who}</span>
+                <span className="text-slate">{state}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[12px] text-slate">
+            This two-of-three approval is a demo mock &mdash; no second signature is collected and
+            nothing above it depends on one. Everything else on this panel is read from Privy.
+          </p>
+        </div>
       </aside>
     </div>
   );

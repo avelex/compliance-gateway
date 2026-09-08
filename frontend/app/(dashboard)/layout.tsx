@@ -1,44 +1,51 @@
 import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { AccountMenu } from "@/components/account-menu";
+import { Providers } from "@/app/providers";
+import { LoginGate } from "@/components/login-gate";
 import { heartbeatMinutesAgo, liveness } from "@/lib/data";
+
+// The whole dashboard sits behind LoginGate, so there is nothing useful to prerender
+// statically — and doing so fails the build whenever NEXT_PUBLIC_PRIVY_APP_ID isn't
+// set yet (e.g. before the Privy app exists).
+export const dynamic = "force-dynamic";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const state = liveness(heartbeatMinutesAgo);
 
   return (
-    <div className="flex min-h-screen flex-col md:h-screen md:min-h-0 md:overflow-hidden">
-      <header className="flex h-13 shrink-0 items-center justify-between bg-ink px-4 text-white md:px-8">
-        <Link href="/gateways" className="display text-[15px] font-semibold tracking-tight">
-          ComplianceGateway
-        </Link>
-        <AccountMenu
-          org="Meridian Holdings"
-          email="alex@meridian.example"
-          wallet="0x9E44…7f30"
-        />
-      </header>
+    <Providers>
+      <LoginGate>
+        <div className="flex min-h-screen flex-col md:h-screen md:min-h-0 md:overflow-hidden">
+          <header className="flex h-13 shrink-0 items-center justify-between bg-ink px-4 text-white md:px-8">
+            <Link href="/gateways" className="display text-[15px] font-semibold tracking-tight">
+              ComplianceGateway
+            </Link>
+            <AccountMenu />
+          </header>
 
-      <div className="flex flex-1 flex-col md:min-h-0 md:flex-row">
-        <aside className="shrink-0 border-b border-rule px-5 py-4 md:w-[212px] md:overflow-y-auto md:border-r md:border-b-0 md:py-6">
-          <Nav />
-        </aside>
+          <div className="flex flex-1 flex-col md:min-h-0 md:flex-row">
+            <aside className="shrink-0 border-b border-rule px-5 py-4 md:w-[212px] md:overflow-y-auto md:border-r md:border-b-0 md:py-6">
+              <Nav />
+            </aside>
 
-        <main className="min-w-0 flex-1 px-6 pb-11 md:overflow-y-auto md:px-10">
-          <div className="scroll-rail">
-            <span />
-          </div>
-          <div className="pt-8 md:pt-9">
-            {state !== "live" && (
-              <div className="mb-8">
-                <MonitoringAlert state={state} minutesAgo={heartbeatMinutesAgo} />
+            <main className="min-w-0 flex-1 px-6 pb-11 md:overflow-y-auto md:px-10">
+              <div className="scroll-rail">
+                <span />
               </div>
-            )}
-            {children}
+              <div className="pt-8 md:pt-9">
+                {state !== "live" && (
+                  <div className="mb-8">
+                    <MonitoringAlert state={state} minutesAgo={heartbeatMinutesAgo} />
+                  </div>
+                )}
+                {children}
+              </div>
+            </main>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </LoginGate>
+    </Providers>
   );
 }
 

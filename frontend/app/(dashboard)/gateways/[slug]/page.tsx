@@ -1,42 +1,43 @@
 import QRCode from "qrcode";
-import {
-  ago,
-  byslug,
-  gateways,
-  heldInScreening,
-  money,
-  payments,
-  policySentence,
-  RECLAIM_SECONDS,
-  short,
-} from "@/lib/data";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
+import { ago, money, payments, policySentence, RECLAIM_SECONDS, short } from "@/lib/data";
+import { loadGateway } from "@/lib/gateways";
 import { GatewayHead } from "@/components/gateway-head";
 import { DeployedBanner } from "@/components/deployed-banner";
 import { CopyLink } from "@/components/copy-link";
 import { Elapsed } from "@/components/elapsed";
 import { ScrollRegion, StatusMark, Td, Th, TxLink } from "@/components/ui";
 
-export function generateStaticParams() {
-  return gateways.map((g) => ({ slug: g.slug }));
-}
-
-export default async function OverviewPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function OverviewPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const g = byslug(slug);
-  const url = `https://pay.compliancegateway.xyz/checkout?gate=${g.address}`;
+  if (!/^0x[0-9a-fA-F]{40}$/.test(slug)) notFound();
+
+  const r = await loadGateway(slug as `0x${string}`);
+  if (!r.ok && r.missing) notFound();
+  if (!r.ok) {
+    // An RPC blip is not a missing gateway, and must not be reported as one.
+    return (
+      <div className="max-w-[880px]">
+        <GatewayHead address={slug} tab="overview" />
+        <p className="mt-9 max-w-[54ch] text-slate">
+          We could not read this gateway from the chain. This tells you nothing about the
+          gateway itself — nothing has changed. Reload to try again.
+        </p>
+      </div>
+    );
+  }
+  const g = r.gateway;
+
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3100"}/checkout?gate=${g.address}`;
   const qr = await QRCode.toString(url, {
     type: "svg",
     margin: 0,
     color: { dark: "#05070E", light: "#0000" },
   });
 
-  const rows = payments.filter((p) => p.gateway === g.slug).slice(0, 5);
-  const held = heldInScreening(g.slug);
+  // mock: payments are out of scope for the Privy pass (lib/data.ts)
+  const rows = payments.slice(0, 5);
 
   return (
     <div className="max-w-[880px]">
@@ -44,13 +45,14 @@ export default async function OverviewPage({
         <DeployedBanner />
       </Suspense>
 
-      <GatewayHead g={g} tab="overview" />
+      <GatewayHead address={g.address} tab="overview" />
 
       <section className="mt-9">
         <h2 className="text-[15px] font-medium">Take a payment</h2>
         <p className="mt-1.5 max-w-[58ch] text-[13px] text-slate">
-          Send this link to a customer or put it behind a button. Money that
-          clears screening arrives in your settlement wallet.
+          This is the link a customer would open. Do not send it out yet: the payer side is
+          not built — the page it opens is a walkthrough that ignores which gateway it was
+          given and takes no money.
         </p>
         <div className="mt-4 flex flex-col gap-6 bg-wash p-5 sm:flex-row">
           <div className="min-w-0 flex-1">
@@ -63,7 +65,7 @@ export default async function OverviewPage({
           </div>
           <div
             role="img"
-            aria-label={`QR code for the payment link to ${g.name}`}
+            aria-label={`QR code for the payment link to gateway ${short(g.address, 6, 4)}`}
             className="size-[104px] shrink-0 self-start [&>svg]:size-full"
             dangerouslySetInnerHTML={{ __html: qr }}
           />
@@ -81,7 +83,6 @@ export default async function OverviewPage({
             value={short(g.payoutTo, 10, 8)}
             mono
           />
-          <Row label="Deployed" value={g.deployedAt} />
           <Row
             label="Risk ceiling"
             value={`${g.policy.maxRisk} of 100 — above this, funds go back`}
@@ -94,22 +95,16 @@ export default async function OverviewPage({
         </p>
       </section>
 
-      <section className="mt-11">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-          <h2 className="text-[15px] font-medium">Recent payments</h2>
-          {held.count > 0 && (
-            <p className="text-[13px] text-slate">
-              <span className="tnum">
-                {held.byToken.map(([t, sum]) => money(sum, t)).join(" + ")}
-              </span>{" "}
-              held in screening
-            </p>
-          )}
-        </div>
+      <section className="mt-11 border-t border-rule pt-5 opacity-70">
+        <h2 className="text-[15px] font-medium text-slate">Recent payments &mdash; demo data</h2>
+        <p className="mt-1 max-w-[58ch] text-[12px] text-slate">
+          Payments are not read from the chain yet. The rows below are sample data: the
+          payers, amounts, times and transaction links are invented and describe no payment
+          to this gateway.
+        </p>
 
-        {rows.length > 0 ? (
-          <ScrollRegion
-            label={`Recent payments for ${g.name}`}
+        <ScrollRegion
+            label={`Recent payments for gateway ${short(g.address, 6, 4)}`}
             className="mt-4"
           >
             <table className="min-w-[620px]">
@@ -152,13 +147,7 @@ export default async function OverviewPage({
                 ))}
               </tbody>
             </table>
-          </ScrollRegion>
-        ) : (
-          <p className="mt-4 max-w-[52ch] text-slate">
-            No payments yet. Copy the link above and send it to a customer to
-            take the first one.
-          </p>
-        )}
+        </ScrollRegion>
       </section>
     </div>
   );

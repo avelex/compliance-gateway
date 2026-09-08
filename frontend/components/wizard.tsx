@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
-import { SYMBOL, type Token } from "@/lib/data";
+import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
+import { Button, ErrorNote, TxLink } from "@/components/ui";
+import { SYMBOL, short, type Policy, type Token } from "@/lib/data";
+import { useOrgWallet } from "@/components/login-gate";
+import { merchantPolicyId, setMerchantPolicyId } from "@/lib/names";
 
 type Kind = "screening" | "regulated";
+
+const POLICIES: Record<Kind, Policy> = {
+  screening: { levelBelow: 0, levelAbove: 0, threshold: 0, maxRisk: 80 },
+  regulated: { levelBelow: 1, levelAbove: 2, threshold: 1000, maxRisk: 50 },
+};
 
 const KINDS: Record<Kind, { title: string; blurb: string; rows: [string, string][] }> = {
   screening: {
@@ -34,21 +42,61 @@ const KINDS: Record<Kind, { title: string; blurb: string; rows: [string, string]
 
 export function Wizard() {
   const router = useRouter();
-  const params = useSearchParams();
+  const { getAccessToken } = usePrivy();
+  const wallet = useOrgWallet();
   const [kind, setKind] = useState<Kind | null>(null);
   const [token, setToken] = useState<Token>("USDC");
   const [step, setStep] = useState<"edit" | "confirm" | "deploying">("edit");
   const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<{ message: string; hash?: string } | null>(null);
 
   async function deploy() {
     setStep("deploying");
     setFailed(false);
+    setError(null);
     try {
-      await new Promise((ok, no) =>
-        setTimeout(() => (params.get("fail") === "deploy" ? no(new Error()) : ok(null)), 1400),
-      );
-      router.push("/gateways/0x2c91?deployed=1");
-    } catch {
+      const res = await fetch("/api/deploy", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${await getAccessToken()}`,
+        },
+        body: JSON.stringify({
+          token,
+          policy: POLICIES[kind!],
+          // A hint only, so the route can widen the merchant's existing permission policy
+          // before the first grant exists to read it from. The route re-derives it from the
+          // wallet and rejects any id whose policy is not named for the caller.
+          policyId: wallet ? merchantPolicyId(wallet.address) : undefined,
+        }),
+      });
+      if (!res.ok) {
+        let message = "The gateway was not deployed.";
+        let hash: string | undefined;
+        try {
+          const body = await res.json();
+          message = body.error ?? message;
+          hash = body.hash;
+        } catch {
+          // Non-JSON body (e.g. a framework-level 500) — fall back to the plain sentence
+          // rather than showing the merchant a raw parse error.
+        }
+        // A response carrying a hash means the deploy was sent. Its own copy says "do not
+        // retry", so it must not be handed a retry button.
+        setError({ message, hash });
+        setFailed(true);
+        setStep("edit");
+        return;
+      }
+      const body = await res.json();
+      if (body.policyId && wallet) setMerchantPolicyId(wallet.address, body.policyId);
+      // The deploy itself succeeded — this is a warning on the success path, not a
+      // failure, so it travels as a query param rather than throwing. It's in hand
+      // right here and needs no storage: nothing later in the flow has it.
+      const warning = body.policyId ? "" : `&policyError=${encodeURIComponent(body.policyError ?? "")}`;
+      router.push(`/gateways/${body.gate}?deployed=1${warning}`);
+    } catch (e) {
+      setError(e instanceof Error ? { message: e.message } : null);
       setFailed(true);
       setStep("edit");
     }
@@ -61,7 +109,7 @@ export function Wizard() {
       <fieldset disabled={step !== "edit"}>
         <legend className="text-[15px] font-medium">What kind of business is this?</legend>
         <p className="mt-1.5 max-w-[56ch] text-[13px] text-slate">
-          You can change this after deployment, but loosening it needs a second approval.
+          You can change this after deployment.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {(Object.keys(KINDS) as Kind[]).map((k) => {
@@ -132,9 +180,13 @@ export function Wizard() {
       <section className="border-t border-ink pt-6">
         {failed && (
           <div className="mb-6">
-            <ErrorNote onRetry={deploy} retryLabel="Try deploying again">
-              The gateway was not deployed. Nothing was created and nothing was spent, and
-              your choices above are still here.
+            <ErrorNote
+              onRetry={error?.hash ? undefined : deploy}
+              retryLabel="Try deploying again"
+            >
+              {error?.message ??
+                "The gateway was not deployed. Nothing was created and nothing was spent, and your choices above are still here."}
+              {error?.hash && <TxLink tx={error.hash} />}
             </ErrorNote>
           </div>
         )}
@@ -142,7 +194,7 @@ export function Wizard() {
         <dl className="grid gap-x-10 gap-y-3 sm:grid-cols-2">
           <Line label="Network" value="Base Sepolia" />
           <Line label="Token" value={token} />
-          <Line label="Settles to" value="0x9E44…7f30" mono />
+          <Line label="Settles to" value={wallet ? short(wallet.address) : "—"} mono />
           <Line label="Gas" value="Covered for you" />
           <Line
             label="Policy"

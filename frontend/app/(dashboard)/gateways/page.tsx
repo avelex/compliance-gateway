@@ -1,18 +1,48 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { gateways, policyLine, short } from "@/lib/data";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { useOrgWallet } from "@/components/login-gate";
+import { listGateways, type OnChainGateway } from "@/lib/gateways";
+import { gatewayName } from "@/lib/names";
+import { policyLine, short } from "@/lib/data";
 
 /**
- * Full-width ledger: the extra horizontal room buys real columns, so token, policy
- * and deploy date stop hiding behind a breakpoint. Below 860px the row folds to one
- * column and each field carries its own label, since the header rule is gone there.
+ * Full-width ledger: the extra horizontal room buys real columns, so token and policy
+ * stop hiding behind a breakpoint. Below 860px the row folds to one column and each
+ * field carries its own label, since the header rule is gone there.
  */
 const ROW =
-  "grid grid-cols-[minmax(200px,1.5fr)_minmax(150px,1.1fr)_64px_minmax(190px,1.2fr)_118px] items-baseline gap-6 max-[860px]:grid-cols-1 max-[860px]:gap-1";
+  "grid grid-cols-[minmax(200px,1.5fr)_minmax(150px,1.1fr)_64px_minmax(190px,1.2fr)] items-baseline gap-6 max-[860px]:grid-cols-1 max-[860px]:gap-1";
 
 const LABEL = "hidden text-slate max-[860px]:inline";
 
 export default function GatewaysPage() {
+  const wallet = useOrgWallet();
+  const [rows, setRows] = useState<OnChainGateway[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [reload, setReload] = useState(0);
+
+  // Three states, failure first. A failed read must never render as "no gateways yet":
+  // that tells a merchant with live gateways they have none and invites a deploy the
+  // relayer pays for (frontend/PRODUCT.md principle 3, and the same shape as wallet/page.tsx).
+  useEffect(() => {
+    if (!wallet) return;
+    let live = true;
+    setFailed(false);
+    listGateways(wallet.address as `0x${string}`)
+      .then((g) => live && setRows(g))
+      .catch(() => {
+        if (!live) return;
+        setRows(null);
+        setFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [wallet, reload]);
+
   return (
     <div>
       <div className="flex items-end justify-between gap-6">
@@ -30,31 +60,49 @@ export default function GatewaysPage() {
           <span>Address</span>
           <span>Token</span>
           <span>Policy</span>
-          <span className="text-right">Deployed</span>
         </li>
-        {gateways.map((g) => (
-          <li key={g.address}>
-            <Link
-              href={`/gateways/${g.slug}`}
-              className={`group ${ROW} border-b border-rule py-5 transition-colors hover:bg-wash`}
-            >
-              <span className="text-[16px] font-medium group-hover:text-blue-deep">{g.name}</span>
-              <span className="font-mono text-[12.5px] text-slate">{short(g.address, 10, 6)}</span>
-              <span className="text-[13.5px]">
-                <span className={LABEL}>Token </span>
-                {g.token}
-              </span>
-              <span className="text-[13.5px]">
-                <span className={LABEL}>Policy </span>
-                {policyLine(g.policy, g.token)}
-              </span>
-              <span className="tnum text-right text-[12.5px] text-slate max-[860px]:text-left">
-                <span className={LABEL}>Deployed </span>
-                {g.deployedAt.split(",")[0]}
-              </span>
-            </Link>
+        {failed ? (
+          <li className="py-8">
+            <ErrorNote onRetry={() => setReload((n) => n + 1)} retryLabel="Try reading them again">
+              We could not reach the network to read your gateways. This tells you nothing
+              about how many you have — none of them changed.
+            </ErrorNote>
           </li>
-        ))}
+        ) : rows === null ? (
+          <li className="py-8 text-slate">Loading your gateways…</li>
+        ) : rows.length === 0 ? (
+          <li className="py-8">
+            <p className="max-w-[52ch] text-slate">
+              You have no gateways yet. One gateway takes one token under one policy, and
+              deploying it costs you nothing — we pay the gas.
+            </p>
+            <div className="mt-5">
+              <Button href="/gateways/new">Create your first gateway</Button>
+            </div>
+          </li>
+        ) : (
+          rows.map((g) => (
+            <li key={g.address}>
+              <Link
+                href={`/gateways/${g.address}`}
+                className={`group ${ROW} border-b border-rule py-5 transition-colors hover:bg-wash`}
+              >
+                <span className="text-[16px] font-medium group-hover:text-blue-deep">
+                  {gatewayName(g.address)}
+                </span>
+                <span className="font-mono text-[12.5px] text-slate">{short(g.address, 10, 6)}</span>
+                <span className="text-[13.5px]">
+                  <span className={LABEL}>Token </span>
+                  {g.token}
+                </span>
+                <span className="text-[13.5px]">
+                  <span className={LABEL}>Policy </span>
+                  {policyLine(g.policy, g.token)}
+                </span>
+              </Link>
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );
