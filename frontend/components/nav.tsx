@@ -8,6 +8,7 @@ const items = [
   { href: "/gateways", label: "Gateways" },
   { href: "/payments", label: "Payments" },
   { href: "/attestations", label: "Attestations" },
+  { href: "/team", label: "Team" },
 ];
 
 export function Nav() {

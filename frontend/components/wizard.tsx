@@ -6,7 +6,6 @@ import { usePrivy } from "@privy-io/react-auth";
 import { Button, ErrorNote, TxLink } from "@/components/ui";
 import { SYMBOL, short, type Policy, type Token } from "@/lib/data";
 import { useOrgWallet } from "@/components/login-gate";
-import { merchantPolicyId, setMerchantPolicyId } from "@/lib/names";
 
 type Kind = "screening" | "regulated";
 
@@ -61,14 +60,7 @@ export function Wizard() {
           "content-type": "application/json",
           authorization: `Bearer ${await getAccessToken()}`,
         },
-        body: JSON.stringify({
-          token,
-          policy: POLICIES[kind!],
-          // A hint only, so the route can widen the merchant's existing permission policy
-          // before the first grant exists to read it from. The route re-derives it from the
-          // wallet and rejects any id whose policy is not named for the caller.
-          policyId: wallet ? merchantPolicyId(wallet.address) : undefined,
-        }),
+        body: JSON.stringify({ token, policy: POLICIES[kind!] }),
       });
       if (!res.ok) {
         let message = "The gateway was not deployed.";
@@ -89,11 +81,10 @@ export function Wizard() {
         return;
       }
       const body = await res.json();
-      if (body.policyId && wallet) setMerchantPolicyId(wallet.address, body.policyId);
       // The deploy itself succeeded — this is a warning on the success path, not a
       // failure, so it travels as a query param rather than throwing. It's in hand
       // right here and needs no storage: nothing later in the flow has it.
-      const warning = body.policyId ? "" : `&policyError=${encodeURIComponent(body.policyError ?? "")}`;
+      const warning = body.quorumId ? "" : `&quorumError=${encodeURIComponent(body.quorumError ?? "")}`;
       router.push(`/gateways/${body.gate}?deployed=1${warning}`);
     } catch (e) {
       setError(e instanceof Error ? { message: e.message } : null);
@@ -210,6 +201,7 @@ export function Wizard() {
                 : "—"
             }
           />
+          <Line label="Policy changes" value="Signed by you, from your own wallet" />
         </dl>
 
         {step === "confirm" ? (

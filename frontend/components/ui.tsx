@@ -121,6 +121,31 @@ export function TxLink({ tx }: { tx: string }) {
   );
 }
 
+/** The "sent but unconfirmed" branch of set-policy-tx.ts (SendPending) never has a real tx
+ *  hash — only Privy's own transactionId and, sometimes, a userOpHash. A TxLink built from
+ *  `undefined` renders a link to "/tx/undefined", which is worse than no link: it looks like a
+ *  real one. Below a hash, show whatever identifiers we do have as plain text the merchant can
+ *  paste into support instead. */
+export function TxOrIds({
+  hash,
+  transactionId,
+  userOpHash,
+}: {
+  hash?: string;
+  transactionId?: string;
+  userOpHash?: string;
+}) {
+  if (hash) return <TxLink tx={hash} />;
+  if (!transactionId && !userOpHash) return null;
+  return (
+    <p className="mt-1 max-w-[52ch] text-[12px] text-slate">
+      No transaction hash yet.
+      {transactionId && <> Reference: <span className="font-mono">{transactionId}</span>.</>}
+      {userOpHash && <> User op: <span className="font-mono">{userOpHash}</span>.</>}
+    </p>
+  );
+}
+
 export function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="py-3.5">

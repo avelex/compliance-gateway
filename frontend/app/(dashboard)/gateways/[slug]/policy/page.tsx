@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { GatewayHead } from "@/components/gateway-head";
 import { PolicyForm } from "@/components/policy-form";
-import { DelegatePanel } from "@/components/delegate-panel";
 import { loadGateway } from "@/lib/gateways";
 
 export default async function PolicyPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -29,7 +28,6 @@ export default async function PolicyPage({ params }: { params: Promise<{ slug: s
     <div className="max-w-[880px]">
       <GatewayHead address={g.address} tab="policy" />
       <Suspense fallback={<p className="mt-9 text-slate">Loading policy…</p>}>
-        <DelegatePanel />
         <PolicyForm gateway={g} />
       </Suspense>
     </div>

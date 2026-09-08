@@ -2,10 +2,11 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { Button, ErrorNote, TxLink } from "@/components/ui";
+import Link from "next/link";
+import { Button, ErrorNote, TxOrIds } from "@/components/ui";
+import { CopyLink } from "@/components/copy-link";
 import { SYMBOL, short, type Policy } from "@/lib/data";
 import type { OnChainGateway } from "@/lib/gateways";
-import { useSignerGrant } from "@/components/delegate-panel";
 import { useOrgWallet } from "@/components/login-gate";
 
 const LEVELS = [
@@ -22,7 +23,6 @@ const levelName = (v: number) => LEVELS.find((l) => l.v === v)!.label;
 export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
   const { getAccessToken } = usePrivy();
   const wallet = useOrgWallet();
-  const { granted: canSign, policyId } = useSignerGrant();
   const ids = { below: useId(), above: useId(), threshold: useId(), risk: useId() };
 
   const start = g.policy;
@@ -31,16 +31,44 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
   const [threshold, setThreshold] = useState(String(start.threshold));
   const [risk, setRisk] = useState(String(start.maxRisk));
 
-  const [saved, setSaved] = useState<{ policy: Policy; hash: string; confirmed: boolean } | null>(null);
+  const [saved, setSaved] = useState<{
+    policy: Policy;
+    hash?: string;
+    transactionId?: string;
+    userOpHash?: string;
+    confirmed: boolean;
+  } | null>(null);
+  const [awaiting, setAwaiting] = useState<{ url: string; have: number; need: number; expiresAt: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [error, setError] = useState<{ message: string; hash?: string } | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    hash?: string;
+    transactionId?: string;
+    userOpHash?: string;
+  } | null>(null);
   const panel = useRef<HTMLDivElement>(null);
 
-  // A compliance change was made; a screen reader must land on the confirmation, not <body>.
+  const [team, setTeam] = useState<{ threshold: number; members: number } | null>(null);
   useEffect(() => {
-    if (saved) panel.current?.focus();
-  }, [saved]);
+    let live = true;
+    getAccessToken()
+      .then((t) => fetch("/api/privy/team", { headers: { authorization: `Bearer ${t}` } }))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+      .then((d) => live && setTeam({ threshold: d.threshold, members: d.members.length }))
+      // A failed read shows "—", not a wrong number: this panel is the only place the merchant
+      // learns how many approvals their change will take.
+      .catch(() => {});
+    return () => { live = false; };
+  }, [getAccessToken]);
+
+  // A compliance change was made; a screen reader must land on the outcome, not <body>. This
+  // covers both terminal states (saved) and the awaiting-approval state — the latter matters
+  // more, since it's the one where nothing was sent and a merchant who doesn't notice it could
+  // believe their change went through.
+  useEffect(() => {
+    if (saved || awaiting) panel.current?.focus();
+  }, [saved, awaiting]);
 
   const thresholdNum = Number(threshold);
   const riskNum = Number(risk);
@@ -77,7 +105,10 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
     thresholdNum !== start.threshold ||
     riskNum !== start.maxRisk;
 
-  const frozen = saved !== null || busy;
+  // A parked change (awaiting) is still a submitted change: leaving the form open would let a
+  // merchant send a second one before the first is approved, so a teammate opening either link
+  // would be approving one of two competing versions with no way to tell them apart.
+  const frozen = saved !== null || awaiting !== null || busy;
 
   async function save() {
     setBusy(true);
@@ -101,12 +132,21 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
       // A framework-level 500 is HTML, not JSON. Showing the merchant "Unexpected token '<'"
       // instead of a sentence is what the empty object avoids.
       const body = await res.json().catch(() => ({}) as Record<string, string>);
-      if (body.status === "confirmed" || body.status === "unconfirmed") {
-        setSaved({ policy: requested, hash: body.hash, confirmed: body.status === "confirmed" });
+      if (body.status === "awaiting") {
+        // Nothing has been sent. The whole state of this change is a link and a countdown.
+        setAwaiting({ url: body.approveUrl, have: body.have, need: body.need, expiresAt: body.expiresAt });
+      } else if (body.status === "confirmed" || body.status === "unconfirmed") {
+        setSaved({
+          policy: requested,
+          hash: body.hash,
+          transactionId: body.transactionId,
+          userOpHash: body.userOpHash,
+          confirmed: body.status === "confirmed",
+        });
       } else {
         // Ownership/validation/auth failures, a Privy refusal, or a reverted transaction —
         // all land here. A reverted send still has a hash worth showing.
-        setError({ message: body.error ?? "", hash: body.hash });
+        setError({ message: body.error ?? "", hash: body.hash, transactionId: body.transactionId, userOpHash: body.userOpHash });
         setFailed(true);
       }
     } catch (e) {
@@ -200,8 +240,37 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
               <ErrorNote onRetry={save}>
                 {error?.message ||
                   "The change was not submitted. Your policy is unchanged, and the values above are still what you typed."}
-                {error?.hash && <TxLink tx={error.hash} />}
+                <TxOrIds hash={error?.hash} transactionId={error?.transactionId} userOpHash={error?.userOpHash} />
               </ErrorNote>
+            </div>
+          )}
+
+          {awaiting && (
+            <div
+              ref={panel}
+              tabIndex={-1}
+              role="status"
+              className="mb-5 border border-rule bg-wash p-4 outline-none"
+            >
+              <h3 className="text-[14px] font-medium">One more approval needed</h3>
+              <p className="mt-1 max-w-[52ch] text-[13px] text-slate">
+                You approved this change. Send this link to someone else on your team — it needs{" "}
+                {awaiting.need - awaiting.have} more approval
+                {awaiting.need - awaiting.have === 1 ? "" : "s"} before it is sent. Nothing is on
+                chain yet, and your policy has not changed.
+              </p>
+              <div className="mt-3">
+                <CopyLink url={awaiting.url} label="Approval link" />
+              </div>
+              <p className="mt-1 text-[12.5px] text-slate">
+                The link stops working at{" "}
+                <span className="tnum">
+                  {new Date(awaiting.expiresAt).toLocaleTimeString("en-GB", {
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </span>
+                . After that, start the change again from here.
+              </p>
             </div>
           )}
 
@@ -244,22 +313,20 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
                 />
               </dl>
 
-              <TxLink tx={saved.hash} />
+              <TxOrIds hash={saved.hash} transactionId={saved.transactionId} userOpHash={saved.userOpHash} />
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <Button onClick={save} disabled={!canSign || !dirty || invalid || busy}>
+              <Button onClick={save} disabled={!dirty || invalid || frozen}>
                 {busy ? "Submitting…" : "Save changes"}
               </Button>
               <span className="max-w-[46ch] text-[12.5px] text-slate">
-                {!dirty
-                  ? "Nothing to save — the policy on chain matches what is on screen."
-                  : invalid
-                    ? "Fix the highlighted fields to continue."
-                    : !canSign
-                      ? policyId
-                        ? "Grant permission above to save changes."
-                        : "This browser doesn't have your permission id — see above."
+                {awaiting
+                  ? "Waiting on a teammate to approve the change above before you can start another."
+                  : !dirty
+                    ? "Nothing to save — the policy on chain matches what is on screen."
+                    : invalid
+                      ? "Fix the highlighted fields to continue."
                       : "Payments already in screening keep the policy they started under."}
               </span>
             </div>
@@ -270,9 +337,8 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
       <aside className="lg:border-l lg:border-rule lg:pl-8">
         <h2 className="text-[15px] font-medium">Who can change this</h2>
         <p className="mt-1.5 text-[13px] text-slate">
-          The wallet permission is enforced by Privy on the key itself, not by this page. The
-          policy that defines it is owned by this dashboard&rsquo;s operator, who can widen it
-          without asking you; revoking the permission in Privy is what ends it.
+          Policy changes are sent from your own wallet and signed with your own login. We hold no
+          key that can change your policy. How many people have to approve a change is up to you.
         </p>
         <dl className="mt-5 space-y-3.5 text-[13px]">
           <div>
@@ -281,49 +347,16 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
               {wallet ? short(wallet.address, 6, 4) : "—"}
             </dd>
           </div>
-          <div>
-            <dt className="text-[12.5px] text-slate">May send</dt>
-            <dd>
-              {policyId ? (
-                <>
-                  <span className="font-mono text-[12px]">setPolicy</span>, carrying no value,
-                  to the gateways you deployed here
-                  <span className="mt-0.5 block font-mono text-[12px] text-slate">
-                    including {short(g.address, 6, 4)}
-                  </span>
-                </>
-              ) : (
-                "No permission policy exists for this wallet yet"
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[12.5px] text-slate">Permission granted</dt>
-            <dd>{canSign ? "Yes" : "Not yet"}</dd>
-          </div>
         </dl>
 
         <div className="mt-6 border-t border-rule pt-4">
           <div className="flex justify-between text-[13px]">
-            <span className="text-slate">Signatures required</span>
-            <span className="tnum">2 of 3</span>
+            <span className="text-slate">Approvals required</span>
+            <span className="tnum">{team ? `${team.threshold} of ${team.members}` : "—"}</span>
           </div>
-          <ul className="mt-2 space-y-2 text-[13px]">
-            {[
-              ["Alex", "signed"],
-              ["Dana", "waiting"],
-              ["Priya", "—"],
-            ].map(([who, state]) => (
-              <li key={who} className="flex justify-between">
-                <span className="text-slate">{who}</span>
-                <span className="text-slate">{state}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[12px] text-slate">
-            This two-of-three approval is a demo mock &mdash; no second signature is collected and
-            nothing above it depends on one. Everything else on this panel is read from Privy.
-          </p>
+          <Link href="/team" className="mt-2 inline-block text-[13px] text-blue underline underline-offset-2">
+            Manage your team
+          </Link>
         </div>
       </aside>
     </div>

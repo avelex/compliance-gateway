@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 
-export function CopyLink({ url }: { url: string }) {
+export function CopyLink({ url, label = "Payment link" }: { url: string; label?: string }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<"idle" | "copied" | "failed">("idle");
@@ -24,7 +24,7 @@ export function CopyLink({ url }: { url: string }) {
   return (
     <div>
       <label htmlFor={id} className="sr-only">
-        Payment link
+        {label}
       </label>
       <div className="flex items-stretch gap-2">
         <input

@@ -1,2 +1,3 @@
 # env files (see .env.local.example for structure)
 .env*.local
+*.tsbuildinfo

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { APIError } from "@privy-io/node";
-import { encodeFunctionData, type Address } from "viem";
-import { gatewayAbi } from "@/lib/abi/gateway";
-import { CAIP2, CHAIN_ID, publicClient } from "@/lib/chain";
-import { toContractPolicy, validatePolicy } from "@/lib/policy";
-import { getPrivy, requireMerchant, Unauthorized, Misconfigured } from "@/lib/privy-server";
+import type { Address } from "viem";
+import { validatePolicy } from "@/lib/policy";
+import { requireMerchant, Unauthorized, Misconfigured } from "@/lib/privy-server";
+import { findMerchantQuorum } from "@/lib/privy-quorum";
+import { put } from "@/lib/pending-approvals";
+import { sendSetPolicy, assertOwns, reportTx, reportPending, SendPending } from "@/lib/set-policy-tx";
 import type { Policy } from "@/lib/data";
 
 export async function POST(req: Request) {
@@ -29,83 +30,59 @@ export async function POST(req: Request) {
 
   // The gateway must belong to the caller. Privy's policy already pins the destination,
   // but the check belongs here too: this route decides which gate address it is even asked for.
-  let owner: string;
-  try {
-    owner = (await publicClient.readContract({ address: gate, abi: gatewayAbi, functionName: "owner" })) as string;
-  } catch {
-    return NextResponse.json({ error: "Could not read this gateway from the chain." }, { status: 502 });
-  }
-  if (owner.toLowerCase() !== merchant.address.toLowerCase()) {
-    return NextResponse.json({ error: "That gateway is not yours" }, { status: 403 });
+  const notYours = await assertOwns(gate, merchant.address);
+  if (notYours) {
+    return NextResponse.json({ error: notYours }, { status: notYours.startsWith("Could") ? 502 : 403 });
   }
 
-  const data = encodeFunctionData({
-    abi: gatewayAbi,
-    functionName: "setPolicy",
-    args: [toContractPolicy(policy)],
+  // The caller's own token is what authorizes the wallet, so it has to be the one we were
+  // handed on this request — not one we stored.
+  const token = req.headers.get("authorization")!.slice(7);
+
+  // How many people the merchant decided this takes. A missing quorum (they have not deployed
+  // yet, or Task 4's create failed) means one — never a number that blocks them out of their
+  // own gateway.
+  const team = await findMerchantQuorum(merchant.did).catch(() => undefined);
+  const threshold = team?.threshold ?? 1;
+
+  if (threshold <= 1) {
+    let hash: string, userOpHash: string | undefined;
+    try {
+      ({ hash, userOpHash } = await sendSetPolicy({ walletId: merchant.walletId, token, gate, policy }));
+    } catch (e) {
+      // Must be checked before the generic branch below: Privy accepted this send, so it is
+      // not a refusal and must not be told to the merchant as one (see SendPending's comment).
+      if (e instanceof SendPending) return reportPending(e);
+      // APIError.makeMessage composes status + response body only; anything else could carry
+      // key material from viem/node internals and must not reach the client.
+      const message = e instanceof APIError ? e.message : "Privy refused the transaction";
+      const status = /signer|authoriz|policy/i.test(message) ? 403 : 502;
+      return NextResponse.json({ error: message }, { status });
+    }
+    return reportTx(hash, userOpHash);
+  }
+
+  // Threshold ≥ 2: nothing is sent yet. Hold the intent and hand back a link.
+  const approvalId = crypto.randomUUID();
+  const approval = put({
+    id: approvalId,
+    did: merchant.did,
+    walletId: merchant.walletId,
+    token,
+    gate,
+    policy,
+    threshold,
+    // Long enough to find a colleague and for them to click; short enough that a held
+    // access token is not held for the afternoon.
+    expiresAt: Date.now() + 10 * 60_000,
   });
 
-  const key = process.env.PRIVY_AUTHORIZATION_PRIVATE_KEY;
-  if (!key) return NextResponse.json({ error: "Privy is not configured." }, { status: 503 });
-
-  let hash: string;
-  try {
-    ({ hash } = await getPrivy()
-      .wallets()
-      .ethereum()
-      .sendTransaction(merchant.walletId, {
-        caip2: CAIP2,
-        params: {
-          transaction: {
-            // Matches the "in" conditions app/api/deploy/route.ts set on this merchant's
-            // Privy policy — but only one spelling each, chosen to match the SDK's own
-            // viem encoder (src/viem.ts formatViemTransaction / formatViemQuantity):
-            // chain_id as a number, value as a 0x-prefixed hex string. Quantity ("a hex
-            // string or a non-negative integer") never means a decimal string.
-            to: gate.toLowerCase(),
-            data,
-            value: "0x0",
-            chain_id: CHAIN_ID,
-          },
-        },
-        authorization_context: { authorization_private_keys: [key] },
-      }));
-  } catch (e) {
-    // A missing or revoked signer grant lands here. Say which, don't say "something went
-    // wrong" — but APIError.makeMessage composes status + response body only, so it's the
-    // only error type here safe to echo verbatim; anything else could carry key material
-    // from viem/node internals and must not reach the client.
-    const message = e instanceof APIError ? e.message : "Privy refused the transaction";
-    const status = /signer|authoriz|policy/i.test(message) ? 403 : 502;
-    return NextResponse.json({ error: message }, { status });
-  }
-
-  // sendTransaction resolves on broadcast, not confirmation (see app/api/deploy/route.ts's
-  // own drip comment) — the same three outcomes as that route apply here.
-  let receipt;
-  try {
-    // Comfortably under a typical platform request cap (Vercel 60s, nginx 504) so this
-    // route's own honest "unconfirmed" branch fires instead of the host truncating the
-    // response and the form reporting a sent transaction as a failure.
-    receipt = await publicClient.waitForTransactionReceipt({
-      hash: hash as `0x${string}`,
-      confirmations: 1,
-      timeout: 20_000,
-    });
-  } catch {
-    return NextResponse.json(
-      {
-        error:
-          "The policy change was sent but we could not confirm it. Do not retry — check this transaction before trying again.",
-        hash,
-        status: "unconfirmed",
-      },
-      { status: 502 },
-    );
-  }
-  if (receipt.status !== "success") {
-    return NextResponse.json({ error: "The policy change transaction reverted", hash, status: "reverted" }, { status: 502 });
-  }
-
-  return NextResponse.json({ hash, status: "confirmed" });
+  return NextResponse.json({
+    status: "awaiting",
+    approvalId,
+    approveUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/approve/${approvalId}`,
+    have: approval.approvals.length,
+    need: threshold,
+    expiresAt: approval.expiresAt,
+  });
 }
