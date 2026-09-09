@@ -1,10 +1,8 @@
-import { Suspense } from "react";
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
-import { PaymentsTable } from "@/components/payments-table";
 import { ago } from "@/lib/data";
 import { GATEWAY_TIMEOUT_SECONDS } from "@/lib/abi/gateway";
 
-export default function PaymentsPage() {
+export default function Loading() {
   return (
     <div className="max-w-[980px]">
       <h1 className="display text-[30px] font-semibold">Payments</h1>
@@ -13,9 +11,7 @@ export default function PaymentsPage() {
         for up to {ago(GATEWAY_TIMEOUT_SECONDS)}, after which it settles to you or goes back to the
         payer. There is no third outcome.
       </p>
-      <Suspense fallback={<DashboardSkeleton />}>
-        <PaymentsTable />
-      </Suspense>
+      <DashboardSkeleton />
     </div>
   );
 }
