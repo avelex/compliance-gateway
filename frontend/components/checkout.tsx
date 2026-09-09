@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   BaseError,
@@ -29,7 +29,9 @@ import { erc20Abi } from "@/lib/abi/erc20";
 import { registryAbi } from "@/lib/abi/registry";
 import { SYMBOL, money, policySentence, short } from "@/lib/data";
 import { toContractPolicy } from "@/lib/policy";
+import { POLL_EVERY_MS } from "@/lib/verify";
 import { ErrorNote } from "@/components/ui";
+import { VerifyStep } from "@/components/verify-step";
 
 const ZERO32 = `0x${"0".repeat(64)}` as Hex;
 const PAYMENT_SETTLED = getAbiItem({ abi: gatewayAbi, name: "PaymentSettled" });
@@ -82,6 +84,16 @@ export function Checkout() {
   const [reads, setReads] = useState<WalletReads | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+
+  // VerifyStep asks on every tick of its own clock; the read behind `refresh` is a
+  // multicall, so it gets its own floor rather than trusting the caller's cadence.
+  const lastPoll = useRef(0);
+  const pollVerification = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPoll.current < POLL_EVERY_MS) return;
+    lastPoll.current = now;
+    setRefresh((n) => n + 1);
+  }, []);
 
   const [busy, setBusy] = useState<Busy>(null);
   // Where the message belongs on screen: a reclaim failure shown at the top of the
@@ -535,11 +547,21 @@ export function Checkout() {
 
             {step?.kind === "amount" && <Note>Type an amount to pay.</Note>}
 
-            {step?.kind === "unverified" && (
+            {step?.kind === "unverified" && step.level === 2 && account && (
+              <VerifyStep
+                gate={g.address}
+                wallet={account}
+                level={2}
+                verified={fresh?.verified ?? false}
+                onPoll={pollVerification}
+              />
+            )}
+
+            {step?.kind === "unverified" && step.level === 1 && (
               <Note>
-                This merchant asks payers for a {step.level === 1 ? "selfie" : "passport"} check
-                before paying this amount. That part is not built yet. Nothing has been sent, and
-                your wallet has not been charged.
+                This merchant asks payers for a selfie check before paying this amount. That part is
+                not built yet — access to World ID Selfie Check has not been granted. Nothing has
+                been sent, and your wallet has not been charged.
               </Note>
             )}
 
