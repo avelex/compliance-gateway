@@ -96,6 +96,9 @@ export function Checkout() {
   }, []);
 
   const [busy, setBusy] = useState<Busy>(null);
+  // True while VerifyStep has a live widget session open — an iframe a reload or an
+  // amount edit would tear out mid-capture. Reported by VerifyStep from an effect.
+  const [verifyBusy, setVerifyBusy] = useState(false);
   // Where the message belongs on screen: a reclaim failure shown at the top of the
   // page is a failure the payer never sees.
   const [error, setError] = useState<{ where: "action" | "reclaim"; text: string } | null>(null);
@@ -456,11 +459,19 @@ export function Checkout() {
             onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
             inputMode="decimal"
             readOnly={locked}
-            disabled={busy !== null || broadcast !== null || (paid !== null && payment?.status !== "none")}
+            disabled={
+              busy !== null || broadcast !== null || (paid !== null && payment?.status !== "none") || verifyBusy
+            }
             className="tnum h-full w-full bg-transparent pr-2 text-[22px] outline-none disabled:text-slate"
           />
           <span className="pr-4 text-[13px] text-slate">{g.token}</span>
         </div>
+
+        {verifyBusy && (
+          <p className="mt-2.5 text-[12.5px] text-slate">
+            The amount cannot change while a check is open.
+          </p>
+        )}
 
         {locked && broadcast === null && (paid === null || payment?.status === "none") && (
           <button
@@ -554,6 +565,7 @@ export function Checkout() {
                 level={2}
                 verified={fresh?.verified ?? false}
                 onPoll={pollVerification}
+                onBusyChange={setVerifyBusy}
               />
             )}
 

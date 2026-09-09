@@ -34,7 +34,7 @@ async function post(path: string, body: unknown): Promise<{ status: number; json
   }
 
   if (res.status === 429)
-    throw new RelayFailure("rate-limited", "Too many attempts. Try again in a few minutes.");
+    throw new RelayFailure("rate-limited", "Too many attempts. Try again later.");
   if (res.status >= 500)
     throw new RelayFailure("unavailable", "The verification service is unavailable.");
   if (!res.ok) {

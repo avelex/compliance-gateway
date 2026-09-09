@@ -12,8 +12,10 @@ type Phase =
   | { kind: "idle" }
   | { kind: "minting" }
   | { kind: "widget"; token: string }
-  /** The widget said it is done. From here the chain is the only source of truth. */
-  | { kind: "waiting"; token: string; startedAt: number };
+  /** The widget said it is done. From here the chain is the only source of truth.
+   *  `token` is null when the payer entered this phase without a widget session —
+   *  e.g. from a reload, claiming to have already finished elsewhere. */
+  | { kind: "waiting"; token: string | null; startedAt: number };
 
 /** The message never claims to know why. The relay cannot read the applicant's status
  *  and the chain records no refusal (SPEC §5), so "not finished" is all we honestly have.
@@ -25,12 +27,16 @@ export function VerifyStep({
   level,
   verified,
   onPoll,
+  onBusyChange,
 }: {
   gate: Address;
   wallet: Address;
   level: 1 | 2;
   verified: boolean;
   onPoll: () => void;
+  /** Called with true once a widget session is open (an iframe a reload would tear
+   *  out mid-capture), false otherwise. Report from an effect, never from render. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +59,9 @@ export function VerifyStep({
 
   /** The widget wires onMessage exactly once, at mount (shouldComponentUpdate returns
    *  false without `force`), so the handler's view of `phase` is frozen at that render
-   *  and its kind test is permanently true. Sumsub fires idCheck.applicantStatus on every
-   *  review-status change, so without this guard each ping would reset startedAt and push
-   *  the give-up deadline out forever. */
+   *  and its kind test is permanently true. This guard keeps a second
+   *  onApplicantSubmitted ping from resetting startedAt and pushing the give-up
+   *  deadline out forever. */
   const transitioned = useRef(false);
 
   /** Queue once when the widget finishes, then keep the clock running. */
@@ -75,6 +81,16 @@ export function VerifyStep({
     setNow(Date.now());
     return () => clearInterval(t);
   }, [phase.kind]);
+
+  /** Non-null exactly while an SDK session (and its iframe) is mounted below — the
+   *  timeout branch's and idle branch's "check again" enter `waiting` with
+   *  token: null, so no widget is open there. */
+  const widgetToken = phase.kind === "widget" || phase.kind === "waiting" ? phase.token : null;
+
+  useEffect(() => {
+    onBusyChange?.(widgetToken !== null);
+    return () => onBusyChange?.(false);
+  }, [widgetToken, onBusyChange]);
 
   const state =
     phase.kind === "waiting"
@@ -117,6 +133,20 @@ export function VerifyStep({
             Your document goes to the verification provider and nowhere else. It never reaches this
             merchant, this page, or the chain.
           </p>
+          <button
+            onClick={() => {
+              lastEnqueuedAt.current = null;
+              setPhase({ kind: "waiting", token: null, startedAt: Date.now() });
+              setNow(Date.now());
+            }}
+            className="mt-3 h-9 rounded-xs border border-rule px-3.5 text-[13px] transition-colors hover:border-ink"
+          >
+            I already passed this — check again
+          </button>
+          <p className="mt-2.5 text-[12.5px] text-slate">
+            Already finished the check elsewhere, or on a reload? This starts no new upload and no
+            new session — it just looks you up by the same identifier.
+          </p>
         </>
       )}
 
@@ -127,19 +157,21 @@ export function VerifyStep({
         </div>
       )}
 
-      {(phase.kind === "widget" || phase.kind === "waiting") && (
+      {widgetToken && (
         <div className="border border-rule p-3">
           <SumsubWebSdk
-            accessToken={phase.token}
+            accessToken={widgetToken}
             expirationHandler={refreshToken}
             config={{ theme: "light" }}
             options={{ addViewportTag: false }}
             onMessage={(type: string) => {
               // The widget reports its own completion; the verdict is not ours to read.
-              if (type === "idCheck.onApplicantSubmitted" || type === "idCheck.applicantStatus")
-                if (phase.kind === "widget") finished(phase.token);
+              // onApplicantSubmitted means documents were submitted. applicantStatus fires
+              // on any status change, including the applicant's pre-existing "init" status
+              // the moment the widget opens, so it is not a completion signal.
+              if (type === "idCheck.onApplicantSubmitted" && phase.kind === "widget") finished(phase.token);
             }}
-            onError={() => setError("The verification widget failed to load.")}
+            onError={() => setError("Something went wrong in the verification widget.")}
           />
         </div>
       )}
@@ -154,7 +186,7 @@ export function VerifyStep({
         </div>
       )}
 
-      {state?.kind === "timeout" && (
+      {state?.kind === "timeout" && phase.kind === "waiting" && (
         <div className="mt-3">
           <p className="text-[13px]">
             The check has not finished. We cannot tell you why from here — the reason, if there is
@@ -163,7 +195,8 @@ export function VerifyStep({
           <button
             onClick={() => {
               lastEnqueuedAt.current = null;
-              setPhase({ kind: "waiting", token: (phase as { token: string }).token, startedAt: Date.now() });
+              setPhase({ kind: "waiting", token: phase.token, startedAt: Date.now() });
+              setNow(Date.now());
             }}
             className="mt-3 h-9 rounded-xs border border-rule px-3.5 text-[13px] transition-colors hover:border-ink"
           >
@@ -171,7 +204,7 @@ export function VerifyStep({
           </button>
           <p className="mt-2.5 text-[12.5px] text-slate">
             Checking again is safe and free. It looks you up by the same identifier, so a check that
-            finished after we stopped waiting will still be found.
+            finished after we stopped waiting can still be picked up.
           </p>
         </div>
       )}
