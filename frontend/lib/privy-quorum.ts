@@ -13,37 +13,37 @@ export type MerchantQuorum = { quorumId: string; organizationId: string; thresho
  *  placeholder they never typed — permanently, since the name is the lookup key. */
 export async function findMerchantQuorum(did: string): Promise<MerchantQuorum | undefined> {
   const privy = getPrivy();
-  const name = quorumName(did);
-  // Organizations are listable and carry the quorum id, so one list resolves both.
-  for await (const org of privy.organizations().list()) {
-    if (org.display_name === name) {
-      const quorum = await privy.keyQuorums().get(org.default_key_quorum_id);
-      return {
-        quorumId: org.default_key_quorum_id,
-        organizationId: org.id,
-        threshold: quorum.authorization_threshold ?? 1,
-      };
+  const user = await privy.users()._get(did);
+  const orgId = user.custom_metadata?.organizationId;
+  
+  if (typeof orgId !== "string") {
+    // Fallback to legacy lookup for users created before this update
+    const name = quorumName(did);
+    for await (const org of privy.organizations().list()) {
+      if (org.display_name === name) {
+        const quorum = await privy.keyQuorums().get(org.default_key_quorum_id);
+        return {
+          quorumId: org.default_key_quorum_id,
+          organizationId: org.id,
+          threshold: quorum.authorization_threshold ?? 1,
+        };
+      }
     }
+    return undefined;
   }
-  return undefined;
+
+  const org = await privy.organizations().get(orgId);
+  const quorum = await privy.keyQuorums().get(org.default_key_quorum_id);
+  return {
+    quorumId: org.default_key_quorum_id,
+    organizationId: org.id,
+    threshold: quorum.authorization_threshold ?? 1,
+  };
 }
 
-// Guards concurrent ensure calls for the same merchant (e.g. two tabs deploying at once):
-// without this, both would see findMerchantQuorum() return nothing and both would create,
-// leaving lookup to arbitrarily pick one of two pairs on the next list() call.
-// ponytail: in-process map, sufficient only because this app runs as one long-lived process
-// (SPEC §8) — would not hold across serverless instances, switch to a DB-backed lock then.
 const inFlight = new Map<string, Promise<MerchantQuorum>>();
 
-/** Creates the merchant's key quorum and organization, or returns the existing pair.
- *  Call this from the deploy route only — it is the one place a merchant has told us a name.
- *
- *  Order is fixed by the API: organizations().create requires default_key_quorum_id, so the
- *  quorum must exist first (SPEC §6).
- *
- *  Starts at 1-of-1 and cannot start higher: a quorum holds user_ids, and a second employee's
- *  DID does not exist until they have logged in themselves. The Team screen raises it later. */
-export async function ensureMerchantQuorum(did: string): Promise<MerchantQuorum> {
+export async function ensureMerchantQuorum(did: string, organizationName?: string): Promise<MerchantQuorum> {
   const existing = await findMerchantQuorum(did);
   if (existing) return existing;
 
@@ -52,20 +52,20 @@ export async function ensureMerchantQuorum(did: string): Promise<MerchantQuorum>
 
   const create = (async (): Promise<MerchantQuorum> => {
     const privy = getPrivy();
+    const displayName = organizationName || quorumName(did);
+    
     const quorum = await privy.keyQuorums().create({
       user_ids: [did],
       authorization_threshold: 1,
-      display_name: quorumName(did),
+      display_name: displayName,
     });
-    // ponytail: if organizations().create throws here, the quorum above is orphaned —
-    // keyQuorums() has no list(), so findMerchantQuorum can only see it via an organization
-    // and a retry will create a second pair. Accepted: the orphan is inert (no wallet, no
-    // policy, no cost), the merchant gets a working pair on retry, cleanup is a Privy-dashboard
-    // chore. Fix if @privy-io/node ever exposes keyQuorums().list().
+    
     const organization = await privy.organizations().create({
       default_key_quorum_id: quorum.id,
-      display_name: quorumName(did),
+      display_name: displayName,
     });
+
+    await privy.users().setCustomMetadata(did, { custom_metadata: { organizationId: organization.id } });
 
     return { quorumId: quorum.id, organizationId: organization.id, threshold: 1 };
   })();
@@ -118,10 +118,23 @@ export async function ensureOrgWallet(quorumId: string, organizationId: string):
 
   const create = (async (): Promise<OrgWallet> => {
     const existing = await findOrgWallet(quorumId);
-    if (existing) return existing;
-    const wallet = await getPrivy().wallets().create({ chain_type: "ethereum", owner_id: quorumId });
-    await getPrivy().wallets().assignEntity(wallet.id, { type: "organization", id: organizationId });
-    return { walletId: wallet.id, address: wallet.address as `0x${string}` };
+    let walletId = existing?.walletId;
+    let address = existing?.address;
+
+    if (!existing) {
+      const wallet = await getPrivy().wallets().create({ chain_type: "ethereum", owner_id: quorumId });
+      walletId = wallet.id;
+      address = wallet.address as `0x${string}`;
+    }
+
+    try {
+      await getPrivy().wallets().assignEntity(walletId!, { type: "organization", id: organizationId });
+    } catch (e: any) {
+      // 409 means it is already assigned to an entity. We assume it's the correct one.
+      if (e.status !== 409) throw e;
+    }
+
+    return { walletId: walletId!, address: address! };
   })();
 
   walletInFlight.set(quorumId, create);
