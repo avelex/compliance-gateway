@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
-import { Button, ErrorNote, TxLink } from "@/components/ui";
+import { usePrivy, useAuthorizationSignature } from "@privy-io/react-auth";
+import { Button, ErrorNote, TxOrIds } from "@/components/ui";
 import { SYMBOL, short, type Policy, type Token } from "@/lib/data";
 import { useOrgWallet } from "@/components/login-gate";
 
@@ -42,50 +42,55 @@ const KINDS: Record<Kind, { title: string; blurb: string; rows: [string, string]
 export function Wizard() {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
+  const { generateAuthorizationSignature } = useAuthorizationSignature();
   const wallet = useOrgWallet();
   const [kind, setKind] = useState<Kind | null>(null);
   const [token, setToken] = useState<Token>("USDC");
   const [step, setStep] = useState<"edit" | "confirm" | "deploying">("edit");
   const [failed, setFailed] = useState(false);
-  const [error, setError] = useState<{ message: string; hash?: string } | null>(null);
+  const [error, setError] = useState<{ message: string; hash?: string; transactionId?: string } | null>(null);
 
   async function deploy() {
     setStep("deploying");
     setFailed(false);
     setError(null);
     try {
-      const res = await fetch("/api/deploy", {
+      const headers = {
+        "content-type": "application/json",
+        authorization: `Bearer ${await getAccessToken()}`,
+      };
+      const prep = await fetch("/api/deploy", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${await getAccessToken()}`,
-        },
+        headers,
         body: JSON.stringify({ token, policy: POLICIES[kind!] }),
       });
-      if (!res.ok) {
-        let message = "The gateway was not deployed.";
-        let hash: string | undefined;
-        try {
-          const body = await res.json();
-          message = body.error ?? message;
-          hash = body.hash;
-        } catch {
-          // Non-JSON body (e.g. a framework-level 500) — fall back to the plain sentence
-          // rather than showing the merchant a raw parse error.
-        }
-        // A response carrying a hash means the deploy was sent. Its own copy says "do not
-        // retry", so it must not be handed a retry button.
-        setError({ message, hash });
+      const prepared = await prep.json().catch(() => ({}) as Record<string, string>);
+      if (!prep.ok || !prepared.requestId) {
+        setError({ message: prepared.error ?? "The gateway was not deployed." });
         setFailed(true);
         setStep("edit");
         return;
       }
-      const body = await res.json();
-      // The deploy itself succeeded — this is a warning on the success path, not a
-      // failure, so it travels as a query param rather than throwing. It's in hand
-      // right here and needs no storage: nothing later in the flow has it.
-      const warning = body.quorumId ? "" : `&quorumError=${encodeURIComponent(body.quorumError ?? "")}`;
-      router.push(`/gateways/${body.gate}?deployed=1${warning}`);
+
+      const { signature } = await generateAuthorizationSignature(prepared.signable);
+
+      const res = await fetch("/api/deploy", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ requestId: prepared.requestId, signature }),
+      });
+      const body = await res.json().catch(() => ({}) as Record<string, string>);
+      if (!res.ok || !body.gate) {
+        // A response carrying a hash or a transactionId means the deploy was sent (a
+        // sponsored send is a user operation: transactionId is often all that comes back —
+        // see submitTransaction). Its own copy says "do not retry", so it must not be
+        // handed a retry button.
+        setError({ message: body.error ?? "The gateway was not deployed.", hash: body.hash, transactionId: body.transactionId });
+        setFailed(true);
+        setStep("edit");
+        return;
+      }
+      router.push(`/gateways/${body.gate}?deployed=1`);
     } catch (e) {
       setError(e instanceof Error ? { message: e.message } : null);
       setFailed(true);
@@ -172,12 +177,12 @@ export function Wizard() {
         {failed && (
           <div className="mb-6">
             <ErrorNote
-              onRetry={error?.hash ? undefined : deploy}
+              onRetry={error?.hash || error?.transactionId ? undefined : deploy}
               retryLabel="Try deploying again"
             >
               {error?.message ??
                 "The gateway was not deployed. Nothing was created and nothing was spent, and your choices above are still here."}
-              {error?.hash && <TxLink tx={error.hash} />}
+              <TxOrIds hash={error?.hash} transactionId={error?.transactionId} />
             </ErrorNote>
           </div>
         )}

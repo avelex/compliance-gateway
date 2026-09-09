@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, ErrorNote } from "@/components/ui";
-import { useOrgWallet } from "@/components/login-gate";
+import { useOrgWalletState } from "@/components/login-gate";
 import { listGateways, type OnChainGateway } from "@/lib/gateways";
 import { gatewayName } from "@/lib/names";
 import { policyLine, short } from "@/lib/data";
@@ -19,16 +19,25 @@ const ROW =
 const LABEL = "hidden text-slate max-[860px]:inline";
 
 export default function GatewaysPage() {
-  const wallet = useOrgWallet();
+  const [reload, setReload] = useState(0);
+  // Same counter drives both reads below, so one retry button retries whichever failed:
+  // the team lookup that finds the org wallet, and the on-chain read of its gateways.
+  const { wallet, failed: teamFailed } = useOrgWalletState(reload);
   const [rows, setRows] = useState<OnChainGateway[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [reload, setReload] = useState(0);
+  const failedToRead = failed || teamFailed;
 
-  // Three states, failure first. A failed read must never render as "no gateways yet":
-  // that tells a merchant with live gateways they have none and invites a deploy the
-  // relayer pays for (frontend/PRODUCT.md principle 3, and the same shape as wallet/page.tsx).
+  // Four states, failure first. A failed read must never render as "no gateways yet": that
+  // tells a merchant with live gateways they have none and invites a deploy the relayer pays
+  // for (frontend/PRODUCT.md principle 3, and the same shape as wallet/page.tsx). "No org
+  // wallet" is resolved to rows = [] here, not left as rows = null forever, so `rows === null`
+  // below means only one thing: this read hasn't come back yet.
   useEffect(() => {
-    if (!wallet) return;
+    if (wallet === undefined) return; // still resolving — neither loading nor empty yet
+    if (wallet === null) {
+      setRows([]); // confirmed: no org wallet, so nothing to read — same as zero gateways
+      return;
+    }
     let live = true;
     setFailed(false);
     listGateways(wallet.address as `0x${string}`)
@@ -61,7 +70,7 @@ export default function GatewaysPage() {
           <span>Token</span>
           <span>Policy</span>
         </li>
-        {failed ? (
+        {failedToRead ? (
           <li className="py-8">
             <ErrorNote onRetry={() => setReload((n) => n + 1)} retryLabel="Try reading them again">
               We could not reach the network to read your gateways. This tells you nothing
@@ -70,7 +79,7 @@ export default function GatewaysPage() {
           </li>
         ) : rows === null ? (
           <li className="py-8 text-slate">Loading your gateways…</li>
-        ) : rows.length === 0 ? (
+        ) : wallet === null || rows.length === 0 ? (
           <li className="py-8">
             <p className="max-w-[52ch] text-slate">
               You have no gateways yet. One gateway takes one token under one policy, and

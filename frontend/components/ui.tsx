@@ -1,11 +1,24 @@
 import Link from "next/link";
 import type { Status } from "@/lib/data";
 
-export function Hex({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <span className={`font-mono text-[12.5px] tracking-tight ${className}`}>{children}</span>;
+export function Hex({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={`font-mono text-[12.5px] tracking-tight ${className}`}>
+      {children}
+    </span>
+  );
 }
 
-const STATUS: Record<Status, { label: string; mark: React.ReactNode; text: string }> = {
+const STATUS: Record<
+  Status,
+  { label: string; mark: React.ReactNode; text: string }
+> = {
   screening: {
     label: "Screening",
     text: "text-blue",
@@ -54,8 +67,17 @@ export function Button({
       ? "bg-blue text-white hover:bg-blue-deep disabled:bg-rule disabled:text-slate"
       : "border border-rule text-ink hover:border-ink disabled:text-slate";
   const cn = `${base} ${look} ${className}`;
-  if (href) return <Link href={href} className={cn}>{children}</Link>;
-  return <button className={cn} {...rest}>{children}</button>;
+  if (href)
+    return (
+      <Link href={href} className={cn}>
+        {children}
+      </Link>
+    );
+  return (
+    <button className={cn} {...rest}>
+      {children}
+    </button>
+  );
 }
 
 /** Names what went wrong and how to get out of it. Alert colour is reserved for
@@ -121,8 +143,9 @@ export function TxLink({ tx }: { tx: string }) {
   );
 }
 
-/** The "sent but unconfirmed" branch of set-policy-tx.ts (SendPending) never has a real tx
- *  hash — only Privy's own transactionId and, sometimes, a userOpHash. A TxLink built from
+/** The "sent but unconfirmed" branch of app/api/privy/set-policy/route.ts (a submit that threw
+ *  after leaving the process, or came back with no hash yet) never has a real tx hash — only
+ *  Privy's own transactionId and, sometimes, a userOpHash. A TxLink built from
  *  `undefined` renders a link to "/tx/undefined", which is worse than no link: it looks like a
  *  real one. Below a hash, show whatever identifiers we do have as plain text the merchant can
  *  paste into support instead. */
@@ -140,13 +163,29 @@ export function TxOrIds({
   return (
     <p className="mt-1 max-w-[52ch] text-[12px] text-slate">
       No transaction hash yet.
-      {transactionId && <> Reference: <span className="font-mono">{transactionId}</span>.</>}
-      {userOpHash && <> User op: <span className="font-mono">{userOpHash}</span>.</>}
+      {transactionId && (
+        <>
+          {" "}
+          Reference: <span className="font-mono">{transactionId}</span>.
+        </>
+      )}
+      {userOpHash && (
+        <>
+          {" "}
+          User op: <span className="font-mono">{userOpHash}</span>.
+        </>
+      )}
     </p>
   );
 }
 
-export function Meta({ label, children }: { label: string; children: React.ReactNode }) {
+export function Meta({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="py-3.5">
       <dt className="text-[12.5px] text-slate">{label}</dt>
@@ -155,7 +194,13 @@ export function Meta({ label, children }: { label: string; children: React.React
   );
 }
 
-export function Th({ children, right = false }: { children?: React.ReactNode; right?: boolean }) {
+export function Th({
+  children,
+  right = false,
+}: {
+  children?: React.ReactNode;
+  right?: boolean;
+}) {
   return (
     <th
       scope="col"
@@ -176,6 +221,10 @@ export function Td({
   className?: string;
 }) {
   return (
-    <td className={`border-b border-rule py-3 pr-6 align-top last:pr-0 ${right ? "text-right" : ""} ${className}`}>{children}</td>
+    <td
+      className={`border-b border-rule py-3 pr-6 align-top last:pr-0 ${right ? "text-right" : ""} ${className}`}
+    >
+      {children}
+    </td>
   );
 }

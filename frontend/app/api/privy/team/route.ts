@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { APIError } from "@privy-io/node";
 import { getPrivy, requireMerchant, Unauthorized, Misconfigured } from "@/lib/privy-server";
-import { findMerchantQuorum, quorumMembers } from "@/lib/privy-quorum";
+import { findMerchantQuorum, quorumMembers, findOrgWallet } from "@/lib/privy-quorum";
 
 async function caller(req: Request) {
   try {
@@ -20,15 +20,20 @@ export async function GET(req: Request) {
   if (response) return response;
   try {
     const team = await findMerchantQuorum(merchant.did);
-    // No gateway deployed yet means no quorum yet. That is a state, not an error: one person,
-    // one approval, and the screen says so.
+    // No gateway deployed yet means no quorum and no org wallet yet. That is a state, not an
+    // error: one person, one approval, and the screen says so.
     if (!team) {
-      return NextResponse.json({ quorumId: null, threshold: 1, members: [merchant.did] });
+      return NextResponse.json({ quorumId: null, threshold: 1, members: [merchant.did], walletAddress: null });
     }
+    const [members, wallet] = await Promise.all([
+      quorumMembers(team.quorumId),
+      findOrgWallet(team.quorumId),
+    ]);
     return NextResponse.json({
       quorumId: team.quorumId,
       threshold: team.threshold,
-      members: await quorumMembers(team.quorumId),
+      members,
+      walletAddress: wallet?.address ?? null,
     });
   } catch (e) {
     const message = e instanceof APIError ? e.message : "Your team could not be read.";

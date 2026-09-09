@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button, ErrorNote } from "@/components/ui";
+import { CopyLink } from "@/components/copy-link";
 import { short } from "@/lib/data";
 
 type Team = { quorumId: string | null; threshold: number; members: string[] };
@@ -70,6 +71,12 @@ export function TeamPanel() {
   return (
     <div className="mt-9 max-w-[62ch]">
       <h2 className="text-[15px] font-medium">Who can approve policy changes</h2>
+      <p className="mt-2 text-[12.5px] text-slate">
+        Your own id, for someone adding you to their team:
+      </p>
+      <div className="mt-1">
+        <CopyLink url={user?.id ?? ""} label="Your Privy user id" />
+      </div>
       <ul className="mt-4 border-t border-rule">
         {team.members.map((m) => (
           <li key={m} className="flex justify-between border-b border-rule py-3 text-[13px]">

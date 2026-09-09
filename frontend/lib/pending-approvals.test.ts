@@ -1,64 +1,85 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { put, get, approve, take, _reset, _size } from "./pending-approvals";
+import { put, get, addSignature, take, _reset, _size } from "./pending-approvals";
 import type { Policy } from "./data";
 
 const policy: Policy = { levelBelow: 1, levelAbove: 2, threshold: 500, maxRisk: 40 };
+const prepared = { url: "https://api.privy.io/v1/wallets/w1/rpc", body: { a: 1 }, expiry: "1788888888888" };
+const signable = {
+  version: 1 as const,
+  method: "POST" as const,
+  url: prepared.url,
+  body: prepared.body,
+  headers: { "privy-app-id": "app", "privy-request-expiry": prepared.expiry },
+};
 const base = {
   id: "a1",
   did: "did:privy:alice",
-  walletId: "w1",
-  token: "alice-access-token",
   gate: "0x1111111111111111111111111111111111111111" as const,
   policy,
   threshold: 2,
+  prepared,
+  signable,
   expiresAt: Date.now() + 60_000,
 };
 
 beforeEach(() => _reset());
 
 describe("pending approvals", () => {
-  it("counts the asker's own click", () => {
-    // The person who filled in the form has approved it by definition. Anything else makes
-    // "2 of 2" mean three clicks.
-    expect(put(base).approvals).toEqual(["did:privy:alice"]);
+  it("starts empty — the asker's signature arrives separately", () => {
+    // The asker signs the same payload everyone else signs. Counting their click before their
+    // signature exists would let a 2-of-2 go out with one signature and be rejected by Privy.
+    expect(put(base).signatures).toEqual([]);
   });
 
-  it("is ready once a second person approves", () => {
+  it("is ready once the threshold of signatures is in", () => {
     put(base);
-    expect(approve("a1", "did:privy:bob")).toMatchObject({ ok: true, ready: true });
+    expect(addSignature("a1", "did:privy:alice", "sig-a")).toMatchObject({ ok: true, ready: false });
+    expect(addSignature("a1", "did:privy:bob", "sig-b")).toMatchObject({ ok: true, ready: true });
   });
 
-  it("refuses a second approval from the same person", () => {
+  it("collects the signatures in order for submission", () => {
     put(base);
-    // Without this, one person clicking their own link twice satisfies a 2-of-2 by themselves,
-    // which is the entire property the threshold exists to provide.
-    expect(approve("a1", "did:privy:alice")).toEqual({ ok: false, reason: "duplicate" });
+    addSignature("a1", "did:privy:alice", "sig-a");
+    const r = addSignature("a1", "did:privy:bob", "sig-b");
+    expect(r.ok && r.approval.signatures).toEqual(["sig-a", "sig-b"]);
+  });
+
+  it("refuses a second signature from the same person", () => {
+    put(base);
+    addSignature("a1", "did:privy:alice", "sig-a");
+    // Without this, one person signing their own link twice satisfies a 2-of-2 alone — the whole
+    // property the threshold exists to provide. Privy would reject the duplicate anyway; this
+    // says so in a sentence instead of a 401.
+    expect(addSignature("a1", "did:privy:alice", "sig-a-again")).toEqual({ ok: false, reason: "duplicate" });
   });
 
   it("refuses an expired approval and forgets it", () => {
     put({ ...base, expiresAt: Date.now() - 1 });
-    expect(approve("a1", "did:privy:bob")).toEqual({ ok: false, reason: "expired" });
-    // The access token must not outlive the window it was kept for.
+    expect(addSignature("a1", "did:privy:bob", "sig-b")).toEqual({ ok: false, reason: "expired" });
+    expect(_size()).toBe(0);
+  });
+
+  it("hides an expired approval from get()", () => {
+    put({ ...base, expiresAt: Date.now() - 1 });
     expect(get("a1")).toBeUndefined();
   });
 
-  it("refuses an unknown id", () => {
-    expect(approve("nope", "did:privy:bob")).toEqual({ ok: false, reason: "unknown" });
-  });
-
-  it("evicts an expired entry nobody ever opened, on the next put()", () => {
-    // No teammate clicked the link, so nothing ever calls get/approve/take with "a1" — those
-    // would prune it themselves and prove nothing about put()'s own sweep.
-    put({ ...base, expiresAt: Date.now() - 1 });
+  it("sweeps expired entries when a new one is stored", () => {
+    put({ ...base, id: "old", expiresAt: Date.now() - 1 });
+    put({ ...base, id: "new" });
+    // A change nobody ever opens still has to leave: get/addSignature only prune the id they
+    // were asked about, which does nothing for a link that is never clicked.
     expect(_size()).toBe(1);
-    put({ ...base, id: "a2" });
-    expect(_size()).toBe(1); // a1 swept away, only a2 (still live) remains
+    expect(get("old")).toBeUndefined();
   });
 
-  it("take() removes it, so a change cannot be sent twice", () => {
+  it("take() removes it so a change is sent at most once", () => {
     put(base);
-    approve("a1", "did:privy:bob");
-    expect(take("a1")).toBeDefined();
+    expect(take("a1")?.id).toBe("a1");
     expect(take("a1")).toBeUndefined();
+  });
+
+  it("refuses a signature for an unknown id", () => {
+    expect(addSignature("nope", "did:privy:bob", "sig")).toEqual({ ok: false, reason: "unknown" });
   });
 });

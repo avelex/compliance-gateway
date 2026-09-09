@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useAuthorizationSignature } from "@privy-io/react-auth";
 import Link from "next/link";
 import { Button, ErrorNote, TxOrIds } from "@/components/ui";
 import { CopyLink } from "@/components/copy-link";
@@ -22,6 +22,7 @@ const levelName = (v: number) => LEVELS.find((l) => l.v === v)!.label;
 
 export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
   const { getAccessToken } = usePrivy();
+  const { generateAuthorizationSignature } = useAuthorizationSignature();
   const wallet = useOrgWallet();
   const ids = { below: useId(), above: useId(), threshold: useId(), risk: useId() };
 
@@ -110,6 +111,9 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
   // would be approving one of two competing versions with no way to tell them apart.
   const frozen = saved !== null || awaiting !== null || busy;
 
+  /** Two phases, because they need different powers: the server can pay for a transaction but
+   *  cannot authorize one, and the browser can authorize one but cannot pay. The bytes signed
+   *  here are the bytes the server posts — it never rebuilds them. */
   async function save() {
     setBusy(true);
     setFailed(false);
@@ -120,21 +124,46 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
       threshold: thresholdNum,
       maxRisk: riskNum,
     };
+    // Once this flips true, the signature POST has been sent — the server may already have
+    // acted on it even if we never see the response. Before that point, nothing has left this
+    // request beyond phase one (which cannot itself submit anything on chain).
+    let signaturePosted = false;
     try {
-      const res = await fetch("/api/privy/set-policy", {
+      const token = await getAccessToken();
+      const headers = { "content-type": "application/json", authorization: `Bearer ${token}` };
+
+      const prep = await fetch("/api/privy/set-policy", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${await getAccessToken()}`,
-        },
+        headers,
         body: JSON.stringify({ gate: g.address, policy: requested }),
       });
       // A framework-level 500 is HTML, not JSON. Showing the merchant "Unexpected token '<'"
       // instead of a sentence is what the empty object avoids.
+      const prepared = await prep.json().catch(() => ({}) as Record<string, string>);
+      if (!prep.ok || !prepared.requestId) {
+        setError({ message: prepared.error ?? "The change was not submitted." });
+        setFailed(true);
+        return;
+      }
+
+      const { signature } = await generateAuthorizationSignature(prepared.signable);
+
+      signaturePosted = true;
+      const res = await fetch("/api/privy/set-policy", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ requestId: prepared.requestId, signature }),
+      });
       const body = await res.json().catch(() => ({}) as Record<string, string>);
+
       if (body.status === "awaiting") {
         // Nothing has been sent. The whole state of this change is a link and a countdown.
-        setAwaiting({ url: body.approveUrl, have: body.have, need: body.need, expiresAt: body.expiresAt });
+        setAwaiting({
+          url: `${window.location.origin}/approve/${prepared.requestId}`,
+          have: body.have,
+          need: body.need,
+          expiresAt: body.expiresAt,
+        });
       } else if (body.status === "confirmed" || body.status === "unconfirmed") {
         setSaved({
           policy: requested,
@@ -144,13 +173,17 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
           confirmed: body.status === "confirmed",
         });
       } else {
-        // Ownership/validation/auth failures, a Privy refusal, or a reverted transaction —
-        // all land here. A reverted send still has a hash worth showing.
-        setError({ message: body.error ?? "", hash: body.hash, transactionId: body.transactionId, userOpHash: body.userOpHash });
+        setError({
+          message: body.error ?? "",
+          hash: body.hash,
+          transactionId: body.transactionId,
+          userOpHash: body.userOpHash,
+        });
         setFailed(true);
       }
     } catch (e) {
-      setError({ message: e instanceof Error ? e.message : "" });
+      // A rejected or failed browser signature lands here. Nothing was sent.
+      setError({ message: e instanceof Error ? e.message : "The change was not submitted." });
       setFailed(true);
     } finally {
       setBusy(false);
@@ -337,8 +370,9 @@ export function PolicyForm({ gateway: g }: { gateway: OnChainGateway }) {
       <aside className="lg:border-l lg:border-rule lg:pl-8">
         <h2 className="text-[15px] font-medium">Who can change this</h2>
         <p className="mt-1.5 text-[13px] text-slate">
-          Policy changes are sent from your own wallet and signed with your own login. We hold no
-          key that can change your policy. How many people have to approve a change is up to you.
+          Policy changes are signed in your own browser and sent from your organisation&rsquo;s
+          wallet. We pay the gas and hold no key that can move it. How many people have to approve
+          a change is up to you, and Privy enforces that number when it is more than one.
         </p>
         <dl className="mt-5 space-y-3.5 text-[13px]">
           <div>

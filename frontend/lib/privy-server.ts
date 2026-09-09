@@ -40,29 +40,18 @@ export async function requireMerchant(req: Request) {
   }
 
   let claims;
-  let user;
   try {
     claims = await privy.utils().auth().verifyAccessToken(token);
-    // Privy overrides get() for identity tokens; _get is the documented by-ID lookup.
-    user = await privy.users()._get(claims.user_id);
+    // Privy overrides get() for identity tokens; _get is the documented by-ID lookup. The
+    // result itself is unused — this call's only job is to fail closed on a deleted user id.
+    await privy.users()._get(claims.user_id);
   } catch {
     // Never surface the SDK's own error text: it can echo back request details.
     throw new Unauthorized("Not signed in");
   }
 
-  const wallet = user.linked_accounts.find(
-    (a) =>
-      a.type === "wallet" &&
-      a.wallet_client_type === "privy" &&
-      a.chain_type === "ethereum" &&
-      a.connector_type === "embedded",
-  ) as { id: string | null; address: string } | undefined;
-  if (!wallet) throw new Unauthorized("No embedded wallet on this account");
-  if (!wallet.id) throw new Unauthorized("No embedded wallet on this account");
-
-  return {
-    did: claims.user_id,
-    walletId: wallet.id,
-    address: wallet.address as `0x${string}`,
-  };
+  // No wallet lookup here on purpose: the merchant's org wallet is owned by their key quorum,
+  // not by this login user, so it can't be read off `user.linked_accounts` — it's looked up by
+  // quorum owner (lib/privy-quorum.ts findOrgWallet) wherever a route needs it.
+  return { did: claims.user_id };
 }

@@ -82,3 +82,52 @@ export async function quorumMembers(quorumId: string): Promise<string[]> {
   const quorum = await getPrivy().keyQuorums().get(quorumId);
   return quorum.user_ids ?? [];
 }
+
+export type OrgWallet = { walletId: string; address: `0x${string}` };
+
+/** The wallet the merchant's quorum owns. Looked up by owner, not stored: same reasoning as
+ *  findMerchantQuorum — there is no database, and `owner_id` is a fact Privy already keeps. */
+export async function findOrgWallet(quorumId: string): Promise<OrgWallet | undefined> {
+  for await (const w of getPrivy().wallets().list()) {
+    if (w.owner_id === quorumId) return { walletId: w.id, address: w.address as `0x${string}` };
+  }
+  return undefined;
+}
+
+// Same guard, same reason as `inFlight` above: two tabs onboarding at once must not create two
+// wallets for one quorum, because findOrgWallet would then pick between them arbitrarily. Unlike
+// `inFlight`, a duplicate here is not inert — see the ordering note in ensureOrgWallet below.
+const walletInFlight = new Map<string, Promise<OrgWallet>>();
+
+/** Creates the organization wallet, or returns the existing one.
+ *
+ *  `owner_id` is the whole point: a wallet owned by the merchant's key quorum is an organization
+ *  wallet in Privy's own sense (SPEC §6), it is visible to every member of that quorum in their
+ *  own browser, and no key of ours can move it. Verified against the live API — a wallet created
+ *  this way signed tx 0xb904472415596a149d4e7dc97c877a86967390afba11d4b77729affac5f0f099 from a
+ *  member's browser with the platform paying gas.
+ *
+ *  `walletInFlight` is checked before the `findOrgWallet` read starts, not after it resolves:
+ *  two concurrent callers both awaiting that read would otherwise both find nothing and both
+ *  proceed to create, and findOrgWallet would then pick arbitrarily between the two wallets it
+ *  created — one of which owns none of the merchant's gateways. Checking first closes that
+ *  window: the second caller joins the first's in-flight promise instead of racing it. */
+export async function ensureOrgWallet(quorumId: string, organizationId: string): Promise<OrgWallet> {
+  const pending = walletInFlight.get(quorumId);
+  if (pending) return pending;
+
+  const create = (async (): Promise<OrgWallet> => {
+    const existing = await findOrgWallet(quorumId);
+    if (existing) return existing;
+    const wallet = await getPrivy().wallets().create({ chain_type: "ethereum", owner_id: quorumId });
+    await getPrivy().wallets().assignEntity(wallet.id, { type: "organization", id: organizationId });
+    return { walletId: wallet.id, address: wallet.address as `0x${string}` };
+  })();
+
+  walletInFlight.set(quorumId, create);
+  try {
+    return await create;
+  } finally {
+    walletInFlight.delete(quorumId);
+  }
+}

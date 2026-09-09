@@ -8,7 +8,6 @@ export function DeployedBanner() {
   const params = useSearchParams();
   const [shown, setShown] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const quorumError = params.get("quorumError");
 
   useEffect(() => {
     if (params.get("deployed") === "1") setShown(true);
@@ -33,13 +32,6 @@ export function DeployedBanner() {
           It is live on Base Sepolia and ready to take payments. Copy the payment link below
           to start taking them.
         </p>
-        {quorumError && (
-          <p className="mt-2 max-w-[52ch] text-[13px] text-alert">
-            Your team record could not be created ({quorumError}). The gateway works and policy
-            changes still work — deploying another gateway will try again and create it. Opening
-            Team will not: it only reads whatever record already exists.
-          </p>
-        )}
       </div>
       <button
         onClick={() => setShown(false)}

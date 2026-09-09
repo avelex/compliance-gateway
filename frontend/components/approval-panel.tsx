@@ -1,25 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useAuthorizationSignature } from "@privy-io/react-auth";
 import { Button, ErrorNote, TxOrIds } from "@/components/ui";
 import { short, SYMBOL, type Policy, type Token } from "@/lib/data";
+import type { SignableRequest } from "@/lib/privy-request";
 
 const LEVELS = ["No identity check", "Selfie check", "Passport check"];
 
 type Pending = {
   gate: string;
   policy: Policy;
+  current?: Policy;
   token?: Token;
   requestedBy: string;
   mine: boolean;
   have: number;
   need: number;
   expiresAt: number;
+  signable: SignableRequest;
 };
 
 export function ApprovalPanel({ id }: { id: string }) {
   const { getAccessToken } = usePrivy();
+  const { generateAuthorizationSignature } = useAuthorizationSignature();
   const [pending, setPending] = useState<Pending | null>(null);
   // "gone" is a genuine 404 from the server — final, no retry (it either expired or was
   // used). "loadFailed" is us never reaching the server — retryable, and must not be told
@@ -42,7 +46,7 @@ export function ApprovalPanel({ id }: { id: string }) {
     setLoadFailed(false);
     getAccessToken()
       .then((t) =>
-        fetch(`/api/privy/set-policy/approve?id=${encodeURIComponent(id)}`, {
+        fetch(`/api/privy/set-policy?id=${encodeURIComponent(id)}`, {
           headers: { authorization: `Bearer ${t}` },
         }),
       )
@@ -58,28 +62,37 @@ export function ApprovalPanel({ id }: { id: string }) {
     };
   }, [getAccessToken, id, reload]);
 
+  /** The approval IS the signature. Privy counts signatures over the same payload, so a teammate
+   *  clicking here signs exactly what the asker signed — not a different request that happens to
+   *  say the same thing. */
   async function approve() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/privy/set-policy/approve", {
+      const { signature } = await generateAuthorizationSignature(pending!.signable);
+      const res = await fetch("/api/privy/set-policy", {
         method: "POST",
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${await getAccessToken()}`,
         },
-        body: JSON.stringify({ approvalId: id }),
+        body: JSON.stringify({ requestId: id, signature }),
       });
       const body = await res.json().catch(() => ({}) as Record<string, string>);
       if (body.status === "confirmed" || body.status === "unconfirmed" || body.status === "reverted") {
-        setSent({ hash: body.hash, transactionId: body.transactionId, userOpHash: body.userOpHash, status: body.status });
+        setSent({
+          hash: body.hash,
+          transactionId: body.transactionId,
+          userOpHash: body.userOpHash,
+          status: body.status,
+        });
       } else if (body.status === "awaiting") {
         setPending((p) => (p ? { ...p, have: body.have, need: body.need, expiresAt: body.expiresAt, mine: true } : p));
       } else {
         setError(body.error ?? "The approval was not recorded. Nothing was sent.");
       }
-    } catch {
-      setError("The approval was not recorded. Nothing was sent — try again.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "The approval was not recorded. Nothing was sent — try again.");
     } finally {
       setBusy(false);
     }
@@ -133,6 +146,9 @@ export function ApprovalPanel({ id }: { id: string }) {
       <dl className="space-y-1 border-t border-rule pt-4 text-[13px]">
         <Row label="Gateway" value={short(pending.gate, 10, 6)} mono />
         <Row label="Requested by" value={short(pending.requestedBy, 16, 6)} mono />
+        {pending.current && (
+          <Row label="What it is now" value={policyChangeSentence(pending.current, symbol)} wide />
+        )}
         <Row label="What changes" value={policyChangeSentence(p, symbol)} wide />
         <Row label="Approvals" value={`${pending.have} of ${pending.need}`} />
         <Row label="Expires" value={deadline} />
@@ -156,7 +172,8 @@ export function ApprovalPanel({ id }: { id: string }) {
             : last
               ? "Your team decided this needs one more approval — yours is it. Clicking sends the change on chain immediately."
               : `Your team decided this change needs ${pending.need} approvals before it is sent. Approving now records your vote; it still needs ${pending.need - pending.have - 1} more before anything goes on chain.`}{" "}
-          This is not enforced by Privy or by the wallet — it is a control this dashboard applies.
+          This threshold is enforced by Privy: the change cannot be sent until your team&rsquo;s
+          signatures are in.
         </span>
       </div>
       {pending.expiresAt <= Date.now() && (
