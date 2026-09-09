@@ -5,7 +5,7 @@ import { publicClient, FACTORY, TOKENS } from "@/lib/chain";
 import { factoryAbi } from "@/lib/abi/factory";
 import { toContractPolicy, validatePolicy } from "@/lib/policy";
 import { requireMerchant, Unauthorized, Misconfigured } from "@/lib/privy-server";
-import { ensureMerchantQuorum, ensureOrgWallet } from "@/lib/privy-quorum";
+import { findMerchantQuorum, ensureOrgWallet } from "@/lib/privy-quorum";
 import { prepareTransaction, submitTransaction, PrivyRefused } from "@/lib/privy-request";
 import type { Policy, Token } from "@/lib/data";
 
@@ -41,11 +41,11 @@ export async function POST(req: Request) {
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
   if (!FACTORY) return NextResponse.json({ error: "The gateway factory is not configured." }, { status: 503 });
 
-  // The quorum and the organization wallet are created here, before the deploy, because the
-  // gateway has to be deployed with the org wallet as its owner — the wallet must exist first.
+  // The quorum and the organization wallet MUST already exist since the setup wizard blocks the UI
   let wallet;
   try {
-    const team = await ensureMerchantQuorum(merchant.did);
+    const team = await findMerchantQuorum(merchant.did);
+    if (!team) throw new Error("Organization not found. Complete the setup wizard first.");
     wallet = await ensureOrgWallet(team.quorumId, team.organizationId);
   } catch (e) {
     const message = e instanceof APIError ? e.message : "Your organisation wallet could not be created.";
