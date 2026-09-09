@@ -79,9 +79,7 @@ export default function WalletPage() {
               </ErrorNote>
             </div>
           ) : balances === null ? (
-            <p className="tnum mt-1 text-[32px] font-medium tracking-tight text-slate">
-              …
-            </p>
+            <div className="mt-1 h-[48px] w-48 animate-pulse rounded-xs bg-rule" />
           ) : (
             <p className="tnum mt-1 text-[32px] font-medium tracking-tight">
               {(Object.keys(TOKENS) as Token[])
