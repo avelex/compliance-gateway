@@ -51,8 +51,17 @@ export function VerifyStep({
   /** The widget calls this when its token expires; it must resolve to a NEW token. */
   const refreshToken = useCallback(() => mintToken(gate, wallet), [gate, wallet]);
 
+  /** The widget wires onMessage exactly once, at mount (shouldComponentUpdate returns
+   *  false without `force`), so the handler's view of `phase` is frozen at that render
+   *  and its kind test is permanently true. Sumsub fires idCheck.applicantStatus on every
+   *  review-status change, so without this guard each ping would reset startedAt and push
+   *  the give-up deadline out forever. */
+  const transitioned = useRef(false);
+
   /** Queue once when the widget finishes, then keep the clock running. */
   const finished = (token: string) => {
+    if (transitioned.current) return;
+    transitioned.current = true;
     lastEnqueuedAt.current = null;
     setPhase({ kind: "waiting", token, startedAt: Date.now() });
   };
