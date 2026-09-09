@@ -10,15 +10,18 @@ export type OnChainGateway = {
   token: Token;
   policy: Policy;
   payoutTo: Address;
+  /** MerchantGateway.TIMEOUT — how long funds sit before anyone may reclaim them. */
+  timeoutSeconds: number;
 };
 
 export async function readGateway(address: Address): Promise<OnChainGateway> {
   const c = { address, abi: gatewayAbi } as const;
-  const [token, payoutTo, policy] = await publicClient.multicall({
+  const [token, payoutTo, policy, timeout] = await publicClient.multicall({
     contracts: [
       { ...c, functionName: "token" },
       { ...c, functionName: "payoutTo" },
       { ...c, functionName: "policy" },
+      { ...c, functionName: "TIMEOUT" },
     ],
     allowFailure: false,
   });
@@ -28,6 +31,7 @@ export async function readGateway(address: Address): Promise<OnChainGateway> {
     address,
     token: symbol,
     payoutTo: payoutTo as Address,
+    timeoutSeconds: Number(timeout as bigint),
     policy: fromContractPolicy({
       levelBelow: policy[0] as number,
       levelAbove: policy[1] as number,

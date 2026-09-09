@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ago, RECLAIM_SECONDS } from "@/lib/data";
+import { ago } from "@/lib/data";
+
+// MerchantGateway.TIMEOUT is a contract constant (15 minutes), the same for every
+// gateway. This component renders sample payments not tied to any deployed gateway,
+// so there is nothing to read it from on chain here.
+const TIMEOUT_SECONDS = 900;
 
 /**
  * A screening payment is the merchant's most anxious moment: money has left the
@@ -16,7 +21,7 @@ export function Elapsed({ since }: { since: number }) {
     return () => clearInterval(t);
   }, []);
 
-  const reclaimable = seconds >= RECLAIM_SECONDS;
+  const reclaimable = seconds >= TIMEOUT_SECONDS;
 
   return (
     <span className="text-[12px] text-slate">

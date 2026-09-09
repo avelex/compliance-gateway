@@ -68,9 +68,6 @@ export type Payment = {
   note?: string;
 };
 
-/** How long funds sit in the gateway before anyone can reclaim them. */
-export const RECLAIM_SECONDS = 90;
-
 export const payments: Payment[] = [
   { id: "0x4f1a", gateway: "0x2c91", date: "7 Sep", time: "12:41:07", payer: "0x3D19bC7a5E048f21c9B6027Ae4f5138cD90a7B62", amount: 250, status: "screening", tx: "0xa192bd8bb0a1af443e619514fe6398ee529776258dfc21a2ebcfdcb9717c6d8d", openedAgo: 47 },
   { id: "0x91c7", gateway: "0x7a3f", date: "7 Sep", time: "12:38:52", payer: "0xC0ffee2547aB19d3E8b04F72A61c5d9308bE47a1", amount: 84.5, status: "returned", tx: "0x3cb20296db412bfd46ae82a36cff6d3a77bbfe5d4a70ccdfd2d57d6da8521df5", note: "Where the funds came from — above your risk ceiling" },
@@ -162,6 +159,7 @@ export function heldInScreening(slug?: string) {
 export function ago(seconds: number) {
   if (seconds < 60) return `${seconds}s`;
   const m = Math.floor(seconds / 60);
-  if (m < 60) return `${m}m ${seconds % 60}s`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
+  const s = seconds % 60;
+  if (m < 60) return s ? `${m}m ${s}s` : `${m}m`;
+  return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${Math.floor(m / 60)}h`;
 }

@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ago, money, payments, policySentence, RECLAIM_SECONDS, short } from "@/lib/data";
+import { ago, money, payments, policySentence, short } from "@/lib/data";
 import { loadGateway } from "@/lib/gateways";
 import { GatewayHead } from "@/components/gateway-head";
 import { DeployedBanner } from "@/components/deployed-banner";
@@ -90,7 +90,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ slug:
         </dl>
         <p className="mt-4 max-w-[62ch] border-l-2 border-ink pl-3 text-[13px]">
           {policySentence(g.policy, g.token)} Funds are screened on every
-          payment, and are held for up to {ago(RECLAIM_SECONDS)} while that
+          payment, and are held for up to {ago(g.timeoutSeconds)} while that
           runs.
         </p>
       </section>

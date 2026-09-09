@@ -12,13 +12,17 @@ import {
   heldInScreening,
   money,
   payments,
-  RECLAIM_SECONDS,
   short,
   SYMBOL,
   type Token,
 } from "@/lib/data";
 import { Elapsed } from "@/components/elapsed";
 import { ErrorNote, ScrollRegion, StatusMark, Td, Th, TxLink } from "@/components/ui";
+
+// MerchantGateway.TIMEOUT is a contract constant (15 minutes), the same for every
+// gateway. This page's held-in-screening figure is sample data across gateways, not
+// one loaded gateway, so there is nothing to read it from on chain here.
+const TIMEOUT_SECONDS = 900;
 
 export default function WalletPage() {
   const wallet = useOrgWallet();
@@ -111,7 +115,7 @@ export default function WalletPage() {
           <p className="mt-1 max-w-[38ch] text-[12.5px] text-slate">
             Sample data, not your money. Payments are not read from the chain yet, so nothing
             here reflects what any gateway is holding. In the built product a payment settles
-            to you or goes back to the payer within {ago(RECLAIM_SECONDS)}.
+            to you or goes back to the payer within {ago(TIMEOUT_SECONDS)}.
           </p>
         </div>
       </section>
