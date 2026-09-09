@@ -6,10 +6,11 @@ import { factoryAbi } from "@/lib/abi/factory";
 import { toContractPolicy, validatePolicy } from "@/lib/policy";
 import { requireMerchant, Unauthorized, Misconfigured } from "@/lib/privy-server";
 import { findMerchantQuorum, ensureOrgWallet } from "@/lib/privy-quorum";
-import { prepareTransaction, submitTransaction, PrivyRefused } from "@/lib/privy-request";
+import { prepareTransaction, submitTransaction, waitForHash, PrivyRefused } from "@/lib/privy-request";
 import type { Policy, Token } from "@/lib/data";
 
-const RECEIPT_TIMEOUT = 20_000;
+/** Leaves room for the hash wait before it: both together must fit inside one request. */
+const RECEIPT_TIMEOUT = 25_000;
 
 /** Deploy requests waiting for their signature. Same lifetime and same reasoning as
  *  lib/pending-approvals.ts, but a deploy needs no quorum: one person, one signature. */
@@ -83,9 +84,13 @@ async function submit(requestId: string, signature: string | undefined) {
     if (e instanceof PrivyRefused) return NextResponse.json({ error: e.message }, { status: 502 });
     return NextResponse.json({ error: "The deployment transaction could not be sent." }, { status: 502 });
   }
-  if (!sent.hash) {
-    // The bundler has not resolved a hash yet. The gateway list finds the gateway by owner once
-    // it lands, so the wizard can send the merchant there rather than to a URL it cannot build.
+  // A sponsored send answers with an empty hash — the bundler fills it in seconds later — so a
+  // deploy that lands perfectly well comes back hashless here. Wait for it rather than reporting
+  // every successful sponsored deploy as unconfirmed.
+  const hash = sent.hash ?? (await waitForHash(sent.transactionId)).hash;
+  if (!hash) {
+    // Still nothing. The gateway list finds the gateway by owner once it lands, so the wizard can
+    // send the merchant there rather than to a URL it cannot build.
     return NextResponse.json(
       {
         error:
@@ -98,19 +103,19 @@ async function submit(requestId: string, signature: string | undefined) {
 
   let receipt;
   try {
-    receipt = await publicClient.waitForTransactionReceipt({ hash: sent.hash as `0x${string}`, confirmations: 1, timeout: RECEIPT_TIMEOUT });
+    receipt = await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}`, confirmations: 1, timeout: RECEIPT_TIMEOUT });
   } catch {
     return NextResponse.json(
       {
         error:
           "The deployment was sent but we could not confirm it. Do not retry — it will appear in your gateways when it lands.",
-        hash: sent.hash,
+        hash,
       },
       { status: 502 },
     );
   }
   if (receipt.status !== "success") {
-    return NextResponse.json({ error: "The deployment transaction reverted", hash: sent.hash }, { status: 502 });
+    return NextResponse.json({ error: "The deployment transaction reverted", hash }, { status: 502 });
   }
 
   // A sponsored send rides in a shared bundle, and GatewayDeployed(address indexed gate) carries
@@ -134,7 +139,7 @@ async function submit(requestId: string, signature: string | undefined) {
   );
   if (!gate) return NextResponse.json({ error: "Deployed, but no gateway of yours was found in that block" }, { status: 502 });
 
-  return NextResponse.json({ gate, hash: sent.hash });
+  return NextResponse.json({ gate, hash });
 }
 
 const gatewayAbiOwner = [

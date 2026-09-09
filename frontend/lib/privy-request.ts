@@ -126,3 +126,37 @@ export async function submitTransaction(
   // as the bundler includes the op, so transaction_id is what we can follow.
   return { hash: data?.hash || undefined, transactionId: data?.transaction_id, userOpHash: data?.user_operation_hash };
 }
+
+/** How long a route may keep asking for the hash. Deliberately well under the 60s a platform
+ *  request gets, so the receipt wait after it still has room. */
+export const HASH_WAIT_MS = 20_000;
+
+/** These end without a hash ever appearing — waiting out the budget only delays the answer. */
+const NEVER_GETS_A_HASH = new Set(["failed", "provider_error"]);
+
+/** A sponsored send is a user operation: Privy answers immediately with an empty hash and a
+ *  transaction_id, and the bundler fills the hash in seconds later. Asking once and giving up
+ *  reports every successful sponsored send as "we could not confirm it" — which is what
+ *  /api/deploy and /api/privy/set-policy both did — so ask again until the hash lands or the
+ *  budget runs out. Returns no hash rather than throwing: "we still do not know" is an outcome
+ *  both callers already handle. */
+export async function waitForHash(
+  transactionId: string | undefined,
+  budgetMs: number = HASH_WAIT_MS,
+  pollMs = 1_500,
+): Promise<{ hash?: string; userOpHash?: string }> {
+  if (!transactionId) return {};
+  const deadline = Date.now() + budgetMs;
+  for (;;) {
+    const tx = await getPrivy()
+      .transactions()
+      .get(transactionId)
+      .catch(() => undefined);
+    if (tx?.transaction_hash) {
+      return { hash: tx.transaction_hash, userOpHash: tx.user_operation_hash };
+    }
+    if (tx && NEVER_GETS_A_HASH.has(tx.status)) return {};
+    if (Date.now() + pollMs >= deadline) return {};
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+}

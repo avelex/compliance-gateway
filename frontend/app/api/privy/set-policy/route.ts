@@ -16,6 +16,7 @@ import {
 import {
   prepareTransaction,
   submitTransaction,
+  waitForHash,
   PrivyRefused,
 } from "@/lib/privy-request";
 import { put, get, addSignature, take } from "@/lib/pending-approvals";
@@ -281,9 +282,10 @@ async function sign(
     );
   }
 
-  if (!sent.hash) {
-    // A sponsored send comes back with an empty hash and a transaction_id; the bundler fills it
-    // in. Report it honestly rather than inventing a confirmation.
+  // A sponsored send comes back with an empty hash and a transaction_id; the bundler fills the
+  // hash in seconds later, so wait for it before calling a change we cannot see unconfirmed.
+  const resolved = sent.hash ? sent : await waitForHash(sent.transactionId);
+  if (!resolved.hash) {
     return NextResponse.json(
       {
         status: "unconfirmed",
@@ -295,5 +297,5 @@ async function sign(
       { status: 502 },
     );
   }
-  return reportTx(sent.hash, sent.userOpHash);
+  return reportTx(resolved.hash, resolved.userOpHash ?? sent.userOpHash);
 }

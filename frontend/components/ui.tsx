@@ -93,7 +93,9 @@ export function ErrorNote({
 }) {
   return (
     <div role="alert" className="border border-alert bg-alert-wash px-4 py-3">
-      <p className="max-w-[54ch] text-[13px] text-ink">{children}</p>
+      {/* A div, not a p: callers pass TxOrIds alongside the sentence, and a <p> inside a <p> is
+          invalid HTML the browser silently unnests — which breaks hydration. */}
+      <div className="max-w-[54ch] text-[13px] text-ink">{children}</div>
       {onRetry && (
         <button
           type="button"
