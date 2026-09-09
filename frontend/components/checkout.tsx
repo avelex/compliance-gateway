@@ -6,6 +6,7 @@ import {
   BaseError,
   UserRejectedRequestError,
   decodeEventLog,
+  getAbiItem,
   type Address,
   type Hex,
 } from "viem";
@@ -13,6 +14,7 @@ import { parseAmount, parseGate, toUnits } from "@/lib/checkout-link";
 import { nextStep, requiredLevel } from "@/lib/checkout-state";
 import { remaining } from "@/lib/spend";
 import {
+  FACTORY_DEPLOY_BLOCK,
   REGISTRY,
   TOKENS,
   baseSepolia,
@@ -30,6 +32,17 @@ import { toContractPolicy } from "@/lib/policy";
 import { ErrorNote } from "@/components/ui";
 
 const ZERO32 = `0x${"0".repeat(64)}` as Hex;
+const PAYMENT_SETTLED = getAbiItem({ abi: gatewayAbi, name: "PaymentSettled" });
+
+type Busy = "connect" | "approve" | "pay" | "reclaim" | null;
+
+/** What payments(id) says. `units` comes from the chain, so it survives a reload. */
+type Payment = { status: PaymentStatus; openedAt: bigint; units: bigint };
+
+/** waitForTransactionReceipt resolves on a mined revert rather than throwing, so
+ *  every write has to look. The hash goes in the message: the payer can check it. */
+const reverted = (hash: Hex) =>
+  new Error(`The transaction was rejected on chain. Nothing was sent. Transaction ${hash}`);
 
 /** Everything the payer's wallet contributes. `null` means "not read yet". */
 type WalletReads = {
@@ -70,12 +83,26 @@ export function Checkout() {
   const [readError, setReadError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
 
-  const [busy, setBusy] = useState<"connect" | "approve" | "pay" | "reclaim" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
+  // Where the message belongs on screen: a reclaim failure shown at the top of the
+  // page is a failure the payer never sees.
+  const [error, setError] = useState<{ where: "action" | "reclaim"; text: string } | null>(null);
 
-  const [paid, setPaid] = useState<{ id: Hex; units: bigint } | null>(null);
-  const [payment, setPayment] = useState<{ status: PaymentStatus; openedAt: bigint } | null>(null);
-  const [now, setNow] = useState(0);
+  /** Set the moment pay() leaves the wallet, before the receipt is read. Once this is
+   *  set the Pay button never comes back: the money may already have moved. */
+  const [broadcast, setBroadcast] = useState<Hex | null>(null);
+
+  // The id is kept in the query string, so a reload during screening still finds the
+  // payment — the property the payments(id) polling design was chosen for.
+  const [paid, setPaid] = useState<{ id: Hex; openedAt: bigint | null } | null>(() => {
+    const id = params.get("payment");
+    return id && /^0x[0-9a-fA-F]{64}$/.test(id) ? { id: id as Hex, openedAt: null } : null;
+  });
+  const [payment, setPayment] = useState<Payment | null>(null);
+  const [pollFails, setPollFails] = useState(0);
+  /** Refunded means two different things. Saying the wrong one accuses the payer. */
+  const [refundCause, setRefundCause] = useState<"screening" | "reclaim" | "unknown">("unknown");
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
 
   const g = load.kind === "ok" ? load.gateway : null;
   const units = toUnits(amount);
@@ -147,9 +174,32 @@ export function Checkout() {
           functionName: "payments",
           args: [paid.id],
         });
-        if (alive) setPayment({ status: PAYMENT_STATUS[Number(p[3])] ?? "none", openedAt: p[1] });
+        if (!alive) return;
+        const status = PAYMENT_STATUS[Number(p[3])] ?? "none";
+        setPollFails(0);
+        setPayment({ status, openedAt: p[1], units: p[4] });
+        // reclaim() sets Refunded and emits nothing (MerchantGateway.sol:109); only
+        // _processReport emits PaymentSettled. So a Refunded payment carrying no such
+        // log was taken back by the payer, and calling that a compliance rejection is
+        // a lie — including after a reload, where a local flag would be gone.
+        if (status === "refunded") {
+          try {
+            const logs = await publicClient.getLogs({
+              address: g.address,
+              event: PAYMENT_SETTLED,
+              args: { id: paid.id },
+              fromBlock: FACTORY_DEPLOY_BLOCK,
+              toBlock: "latest",
+            });
+            if (alive) setRefundCause(logs.length > 0 ? "screening" : "reclaim");
+          } catch {
+            // Unknown stays unknown. The screen says less rather than something untrue.
+          }
+        }
       } catch {
-        // A blip between polls tells us nothing new. Keep the last verdict.
+        // A blip after a verdict tells us nothing new, but a run of them before the
+        // first read would otherwise leave the payer watching a spinner forever.
+        if (alive) setPollFails((n) => n + 1);
       }
     };
     read();
@@ -160,15 +210,19 @@ export function Checkout() {
     };
   }, [g, paid, done]);
 
-  const pending = payment?.status === "pending";
+  // openedAt from the chain when we have it, from the local clock at pay time when we
+  // do not: the reclaim button must be reachable even when the poll is failing.
+  const openedAt = payment?.openedAt ?? paid?.openedAt ?? null;
+  const showReclaim =
+    paid !== null && openedAt !== null && !done && payment?.status !== "none";
 
   useEffect(() => {
-    if (!pending) return;
+    if (!showReclaim) return;
     const tick = () => setNow(Math.floor(Date.now() / 1000));
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [pending]);
+  }, [showReclaim]);
 
   if (!gate)
     return (
@@ -206,7 +260,7 @@ export function Checkout() {
     : null;
 
   // openedAt is a bigint from the ABI, timeoutSeconds a number: both into Number space.
-  const left = payment ? Math.max(0, Number(payment.openedAt) + g.timeoutSeconds - now) : 0;
+  const left = openedAt !== null ? Math.max(0, Number(openedAt) + g.timeoutSeconds - now) : 0;
 
   // remaining() wants base units; Policy.threshold is human units.
   const limit =
@@ -226,7 +280,7 @@ export function Checkout() {
       await run(walletClient(account), account);
     } catch (e) {
       // A rejected signature returns quietly to the previous step.
-      if (!rejected(e)) setError(message(e));
+      if (!rejected(e)) setError({ where: kind === "reclaim" ? "reclaim" : "action", text: message(e) });
     } finally {
       setBusy(null);
     }
@@ -238,7 +292,7 @@ export function Checkout() {
     try {
       setAccount(await connectWallet());
     } catch (e) {
-      if (!rejected(e)) setError(message(e));
+      if (!rejected(e)) setError({ where: "action", text: message(e) });
     } finally {
       setBusy(null);
     }
@@ -255,7 +309,8 @@ export function Checkout() {
         account: a,
         chain: baseSepolia,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status === "reverted") throw reverted(hash);
       setRefresh((n) => n + 1);
     });
 
@@ -270,7 +325,11 @@ export function Checkout() {
         account: a,
         chain: baseSepolia,
       });
+      setBroadcast(hash);
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      // A mined revert resolves rather than throwing. Reverts here are ordinary:
+      // too little token, CumulativeThreshold, a lost race on verification.
+      if (receipt.status === "reverted") throw reverted(hash);
       // pay() returns the id, but a return value is not available to an external
       // caller. Read it back out of the receipt.
       const opened = receipt.logs
@@ -284,7 +343,11 @@ export function Checkout() {
         })
         .find((e) => e?.eventName === "PaymentOpened");
       if (!opened) throw new Error("The payment went through but we could not read its id");
-      setPaid({ id: (opened.args as { id: Hex }).id, units });
+      const id = (opened.args as { id: Hex }).id;
+      setPaid({ id, openedAt: BigInt(Math.floor(Date.now() / 1000)) });
+      const url = new URL(window.location.href);
+      url.searchParams.set("payment", id);
+      window.history.replaceState(null, "", url);
       setRefresh((n) => n + 1);
     });
 
@@ -299,11 +362,36 @@ export function Checkout() {
         account: a,
         chain: baseSepolia,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status === "reverted") throw reverted(hash);
+      setRefundCause("reclaim");
     });
 
-  const settling = paid !== null && payment === null;
-  const value = paid ? Number(paid.units) / 1e6 : 0;
+  const pollError = pollFails >= 3 && payment === null;
+  const settling = paid !== null && payment === null && !pollError;
+  /** Broadcast, then something went wrong before we had an id. */
+  const stranded = broadcast !== null && paid === null && busy === null;
+  const value = payment ? Number(payment.units) / 1e6 : 0;
+
+  const verdict =
+    payment === null || payment.status === "none"
+      ? null
+      : payment.status === "pending"
+        ? {
+            state: "running" as const,
+            detail: "About a minute. If it does not pass, your money comes back on its own.",
+          }
+        : payment.status === "settled"
+          ? { state: "clear" as const, detail: "Cleared the merchant's risk ceiling." }
+          : {
+              state: "stopped" as const,
+              detail:
+                refundCause === "reclaim"
+                  ? "No verdict arrived. You took your money back before one did."
+                  : refundCause === "screening"
+                    ? "Above this merchant's risk ceiling."
+                    : "No verdict was recorded against this payment.",
+            };
 
   return (
     <div className="mx-auto max-w-[560px] px-6 pt-14 pb-24">
@@ -335,13 +423,13 @@ export function Checkout() {
             onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
             inputMode="decimal"
             readOnly={locked}
-            disabled={busy !== null || paid !== null}
+            disabled={busy !== null || paid !== null || broadcast !== null}
             className="tnum h-full w-full bg-transparent pr-2 text-[22px] outline-none disabled:text-slate"
           />
           <span className="pr-4 text-[13px] text-slate">{g.token}</span>
         </div>
 
-        {locked && paid === null && (
+        {locked && paid === null && broadcast === null && (
           <button
             onClick={() => setLocked(false)}
             className="mt-2.5 text-[13px] text-blue underline underline-offset-2 hover:text-blue-deep"
@@ -365,7 +453,9 @@ export function Checkout() {
       </section>
 
       <section className="mt-8 space-y-3">
-        {error && <ErrorNote onRetry={() => setError(null)} retryLabel="Dismiss">{error}</ErrorNote>}
+        {error?.where === "action" && !stranded && (
+          <ErrorNote onRetry={() => setError(null)} retryLabel="Dismiss">{error.text}</ErrorNote>
+        )}
 
         {busy === "approve" && <Waiting label="Confirming the approval" detail="One block on Base." />}
         {busy === "pay" && <Waiting label="Confirming the payment" detail="One block on Base." />}
@@ -373,7 +463,30 @@ export function Checkout() {
           <Waiting label="Reading the payment" detail="One moment." />
         )}
 
-        {busy === null && paid === null && (
+        {/* Once a payment transaction is broadcast the Pay button must not come back. */}
+        {stranded && (
+          <ErrorNote>
+            {error?.text ?? "We could not confirm this payment."} Check the transaction on an
+            explorer before paying again, and reload the page to try once more. Transaction{" "}
+            {broadcast}.
+          </ErrorNote>
+        )}
+
+        {pollError && (
+          <ErrorNote onRetry={() => setPollFails(0)} retryLabel="Try reading it again">
+            We could not read this payment back from the chain, so we cannot tell you where it
+            stands. Your money is in the gateway contract and only a verdict or you can move it.
+            Reference {broadcast ?? paid?.id}.
+          </ErrorNote>
+        )}
+
+        {payment?.status === "none" && (
+          <Note>
+            We cannot find this payment on this gateway. Check the link, or the gateway it names.
+          </Note>
+        )}
+
+        {busy === null && paid === null && broadcast === null && (
           <>
             {!account && !hasInjectedWallet() && (
               <Note>
@@ -407,7 +520,11 @@ export function Checkout() {
             {step?.kind === "approve" && (
               <>
                 <Action onClick={approve}>Allow {g.token} to be spent</Action>
-                <Note>One-time. Next payment to this merchant is a single signature.</Note>
+                <Note>
+                  This allows {SYMBOL[g.token]}
+                  {amount} and no more, and the payment spends all of it. A later payment asks for
+                  its own approval.
+                </Note>
               </>
             )}
 
@@ -424,27 +541,17 @@ export function Checkout() {
         )}
       </section>
 
-      {payment && (
+      {(verdict || showReclaim) && (
         <section className="mt-10">
           <h2 className="text-[15px] font-medium">Screening</h2>
 
-          <ol className="mt-4 border-l-2 border-ink pl-5">
-            <Check
-              title="Where the funds came from"
-              state={
-                payment.status === "pending" ? "running" : payment.status === "settled" ? "clear" : "stopped"
-              }
-              detail={
-                payment.status === "pending"
-                  ? "About a minute. If it does not pass, your money comes back on its own."
-                  : payment.status === "settled"
-                    ? "Cleared the merchant's risk ceiling."
-                    : "Above this merchant's risk ceiling."
-              }
-            />
-          </ol>
+          {verdict && (
+            <ol className="mt-4 border-l-2 border-ink pl-5">
+              <Check title="Where the funds came from" state={verdict.state} detail={verdict.detail} />
+            </ol>
+          )}
 
-          {payment.status === "pending" && (
+          {showReclaim && (
             <div className="mt-6 flex items-center justify-between gap-4 border-t border-rule pt-4">
               <p className="max-w-[38ch] text-[12.5px] text-slate">
                 If no verdict arrives, take your money back yourself. Nobody can hold it.
@@ -461,18 +568,32 @@ export function Checkout() {
             </div>
           )}
 
-          {done && (
+          {error?.where === "reclaim" && (
+            <div className="mt-3">
+              <ErrorNote onRetry={() => setError(null)} retryLabel="Dismiss">{error.text}</ErrorNote>
+            </div>
+          )}
+
+          {done && payment && (
             <div
               className={`mt-7 border-l-2 pl-5 ${payment.status === "settled" ? "border-blue" : "hatch border-ink"}`}
             >
               <div className="bg-paper">
                 <h3 className="display text-[21px] font-semibold">
-                  {payment.status === "settled" ? "Paid" : "Returned to your wallet"}
+                  {payment.status === "settled"
+                    ? "Paid"
+                    : refundCause === "reclaim"
+                      ? "You took it back"
+                      : "Returned to your wallet"}
                 </h3>
                 <p className="mt-1.5 max-w-[46ch] text-[13px] text-slate">
                   {payment.status === "settled"
                     ? `${money(value, g.token)} reached the merchant. Nothing about you reached them.`
-                    : `${money(value, g.token)} is back where it started. The merchant was never paid and never learned anything about you.`}
+                    : refundCause === "reclaim"
+                      ? `${money(value, g.token)} is back in your wallet. No verdict arrived, and the merchant was never paid.`
+                      : refundCause === "screening"
+                        ? `${money(value, g.token)} is back where it started. The merchant was never paid and never learned anything about you.`
+                        : `${money(value, g.token)} is back in your wallet. The merchant was never paid.`}
                 </p>
               </div>
             </div>
