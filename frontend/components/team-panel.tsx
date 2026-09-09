@@ -5,6 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { Button, ErrorNote } from "@/components/ui";
 import { CopyLink } from "@/components/copy-link";
 import { short } from "@/lib/data";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
 type Team = { quorumId: string | null; threshold: number; members: string[] };
 
@@ -66,7 +67,7 @@ export function TeamPanel() {
       </div>
     );
   }
-  if (!team) return <p className="mt-9 text-slate">Loading your team…</p>;
+  if (!team) return <DashboardSkeleton />;
 
   return (
     <div className="mt-9 max-w-[62ch]">
