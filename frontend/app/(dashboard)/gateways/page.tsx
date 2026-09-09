@@ -7,6 +7,7 @@ import { useOrgWalletState } from "@/components/login-gate";
 import { listGateways, type OnChainGateway } from "@/lib/gateways";
 import { gatewayName } from "@/lib/names";
 import { policyLine, short } from "@/lib/data";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
 /**
  * Full-width ledger: the extra horizontal room buys real columns, so token and policy
@@ -78,7 +79,7 @@ export default function GatewaysPage() {
             </ErrorNote>
           </li>
         ) : rows === null ? (
-          <li className="py-8 text-slate">Loading your gateways…</li>
+          <li className="py-2"><DashboardSkeleton /></li>
         ) : wallet === null || rows.length === 0 ? (
           <li className="py-8">
             <p className="max-w-[52ch] text-slate">
