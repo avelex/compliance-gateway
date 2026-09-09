@@ -76,3 +76,8 @@ export const gatewayAbi = [
 /** libs/Merchant.sol: enum Status { None, Pending, Settled, Refunded }. */
 export const PAYMENT_STATUS = ["none", "pending", "settled", "refunded"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
+
+/** MerchantGateway.TIMEOUT — a Solidity constant, so it is the same for every gateway.
+ *  Prefer OnChainGateway.timeoutSeconds where a gateway has actually been read; this is
+ *  for screens that show sample payments belonging to no deployed gateway. */
+export const GATEWAY_TIMEOUT_SECONDS = 900;
