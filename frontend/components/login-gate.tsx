@@ -72,8 +72,15 @@ export function useOrgWallet(): ConnectedWallet | null | undefined {
   return useOrgWalletState().wallet;
 }
 
+import { SetupWizard } from "./setup-wizard";
+
 export function LoginGate({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated, login } = usePrivy();
+  const { ready, authenticated, login, user } = usePrivy();
+  
+  // We use a refresh key to force a re-render after the wizard completes,
+  // but since we don't have the `user` object updated instantly from our own API,
+  // we rely on local state to allow them through.
+  const [setupFinished, setSetupFinished] = useState(false);
 
   if (!ready) return null;
 
@@ -82,8 +89,8 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
       <div className="mx-auto max-w-[46ch] px-6 pt-24">
         <h1 className="display text-[30px] font-semibold">Sign in</h1>
         <p className="mt-2 text-slate">
-          Your organisation&rsquo;s wallet is created when you deploy your first gateway, and
-          held by Privy. There is no seed phrase to write down and no gas to top up.
+          Your organisation&rsquo;s wallet is created during setup and held by Privy.
+          There is no seed phrase to write down and no gas to top up.
         </p>
         <div className="mt-7">
           <Button onClick={login}>Continue with email</Button>
@@ -92,8 +99,10 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // No wallet is a legitimate state now, not a spinner: a merchant who has not been through the
-  // wizard has no organization wallet yet, and the wizard is what creates it. Screens that need
-  // one say so themselves.
+  // Block access if the user has no organization ID in their metadata AND they haven't just finished setup
+  if (!user?.customMetadata?.organizationId && !setupFinished) {
+    return <SetupWizard onComplete={() => setSetupFinished(true)} />;
+  }
+
   return <>{children}</>;
 }
