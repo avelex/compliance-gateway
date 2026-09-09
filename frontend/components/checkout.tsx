@@ -89,8 +89,9 @@ export function Checkout() {
   const [error, setError] = useState<{ where: "action" | "reclaim"; text: string } | null>(null);
 
   /** Set the moment pay() leaves the wallet, before the receipt is read. Once this is
-   *  set the Pay button never comes back: the money may already have moved. */
-  const [broadcast, setBroadcast] = useState<Hex | null>(null);
+   *  set the Pay button never comes back: the money may already have moved. `outcome`
+   *  is what we know about it — a mined revert is certain, anything else is not. */
+  const [broadcast, setBroadcast] = useState<{ hash: Hex; outcome: "unknown" | "reverted" } | null>(null);
 
   // The id is kept in the query string, so a reload during screening still finds the
   // payment — the property the payments(id) polling design was chosen for.
@@ -178,24 +179,6 @@ export function Checkout() {
         const status = PAYMENT_STATUS[Number(p[3])] ?? "none";
         setPollFails(0);
         setPayment({ status, openedAt: p[1], units: p[4] });
-        // reclaim() sets Refunded and emits nothing (MerchantGateway.sol:109); only
-        // _processReport emits PaymentSettled. So a Refunded payment carrying no such
-        // log was taken back by the payer, and calling that a compliance rejection is
-        // a lie — including after a reload, where a local flag would be gone.
-        if (status === "refunded") {
-          try {
-            const logs = await publicClient.getLogs({
-              address: g.address,
-              event: PAYMENT_SETTLED,
-              args: { id: paid.id },
-              fromBlock: FACTORY_DEPLOY_BLOCK,
-              toBlock: "latest",
-            });
-            if (alive) setRefundCause(logs.length > 0 ? "screening" : "reclaim");
-          } catch {
-            // Unknown stays unknown. The screen says less rather than something untrue.
-          }
-        }
       } catch {
         // A blip after a verdict tells us nothing new, but a run of them before the
         // first read would otherwise leave the payer watching a spinner forever.
@@ -209,6 +192,41 @@ export function Checkout() {
       clearInterval(t);
     };
   }, [g, paid, done]);
+
+  // reclaim() sets Refunded and emits nothing (MerchantGateway.sol:109); only
+  // _processReport emits PaymentSettled. So a Refunded payment carrying no such log
+  // was taken back by the payer, and calling that a compliance rejection is a lie —
+  // including after a reload, where a local flag would be gone.
+  //
+  // This lives in its own effect on purpose. Run inside the poll it would lose a race
+  // with its own setPayment: that flips `done`, React tears the poll effect down, and
+  // the cleanup marks the in-flight request stale before it ever resolves.
+  const needsCause = payment?.status === "refunded" && refundCause === "unknown";
+
+  useEffect(() => {
+    // FACTORY_DEPLOY_BLOCK is the only floor we can trust — no gateway predates the
+    // factory — and it falls back to 0n when unset, which many providers reject
+    // outright. No trustworthy floor means no scan, and no scan means "unknown".
+    if (!g || !paid || !needsCause || FACTORY_DEPLOY_BLOCK === 0n) return;
+    let alive = true;
+    publicClient
+      .getLogs({
+        address: g.address,
+        event: PAYMENT_SETTLED,
+        args: { id: paid.id },
+        fromBlock: FACTORY_DEPLOY_BLOCK,
+        toBlock: "latest",
+      })
+      .then((logs) => {
+        if (alive) setRefundCause(logs.length > 0 ? "screening" : "reclaim");
+      })
+      .catch(() => {
+        // Unknown stays unknown. The screen says less rather than something untrue.
+      });
+    return () => {
+      alive = false;
+    };
+  }, [g, paid, needsCause]);
 
   // openedAt from the chain when we have it, from the local clock at pay time when we
   // do not: the reclaim button must be reachable even when the poll is failing.
@@ -325,11 +343,14 @@ export function Checkout() {
         account: a,
         chain: baseSepolia,
       });
-      setBroadcast(hash);
+      setBroadcast({ hash, outcome: "unknown" });
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       // A mined revert resolves rather than throwing. Reverts here are ordinary:
       // too little token, CumulativeThreshold, a lost race on verification.
-      if (receipt.status === "reverted") throw reverted(hash);
+      if (receipt.status === "reverted") {
+        setBroadcast({ hash, outcome: "reverted" });
+        throw reverted(hash);
+      }
       // pay() returns the id, but a return value is not available to an external
       // caller. Read it back out of the receipt.
       const opened = receipt.logs
@@ -370,7 +391,7 @@ export function Checkout() {
   const pollError = pollFails >= 3 && payment === null;
   const settling = paid !== null && payment === null && !pollError;
   /** Broadcast, then something went wrong before we had an id. */
-  const stranded = broadcast !== null && paid === null && busy === null;
+  const stranded = paid === null && busy === null ? broadcast : null;
   const value = payment ? Number(payment.units) / 1e6 : 0;
 
   const verdict =
@@ -423,13 +444,13 @@ export function Checkout() {
             onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
             inputMode="decimal"
             readOnly={locked}
-            disabled={busy !== null || paid !== null || broadcast !== null}
+            disabled={busy !== null || broadcast !== null || (paid !== null && payment?.status !== "none")}
             className="tnum h-full w-full bg-transparent pr-2 text-[22px] outline-none disabled:text-slate"
           />
           <span className="pr-4 text-[13px] text-slate">{g.token}</span>
         </div>
 
-        {locked && paid === null && broadcast === null && (
+        {locked && broadcast === null && (paid === null || payment?.status === "none") && (
           <button
             onClick={() => setLocked(false)}
             className="mt-2.5 text-[13px] text-blue underline underline-offset-2 hover:text-blue-deep"
@@ -453,7 +474,7 @@ export function Checkout() {
       </section>
 
       <section className="mt-8 space-y-3">
-        {error?.where === "action" && !stranded && (
+        {error?.where === "action" && stranded === null && (
           <ErrorNote onRetry={() => setError(null)} retryLabel="Dismiss">{error.text}</ErrorNote>
         )}
 
@@ -466,9 +487,10 @@ export function Checkout() {
         {/* Once a payment transaction is broadcast the Pay button must not come back. */}
         {stranded && (
           <ErrorNote>
-            {error?.text ?? "We could not confirm this payment."} Check the transaction on an
-            explorer before paying again, and reload the page to try once more. Transaction{" "}
-            {broadcast}.
+            {stranded.outcome === "reverted"
+              ? "The transaction was rejected on chain. No money left your wallet. Reload the page to try again."
+              : "The payment transaction was sent and we could not read what happened to it, so we cannot tell you whether the money moved. Check it on an explorer before paying again."}{" "}
+            Transaction {stranded.hash}.
           </ErrorNote>
         )}
 
@@ -476,7 +498,7 @@ export function Checkout() {
           <ErrorNote onRetry={() => setPollFails(0)} retryLabel="Try reading it again">
             We could not read this payment back from the chain, so we cannot tell you where it
             stands. Your money is in the gateway contract and only a verdict or you can move it.
-            Reference {broadcast ?? paid?.id}.
+            Reference {broadcast?.hash ?? paid?.id}.
           </ErrorNote>
         )}
 
@@ -486,7 +508,11 @@ export function Checkout() {
           </Note>
         )}
 
-        {busy === null && paid === null && broadcast === null && (
+        {/* A stale or foreign ?payment= id answers to nothing on chain. Let the payer
+            pay rather than stranding them, but never drop the id: a lagging RPC node
+            can read a real payment as "none" for a block or two, and the id is the
+            only route back to the reclaim button. */}
+        {busy === null && broadcast === null && (paid === null || payment?.status === "none") && (
           <>
             {!account && !hasInjectedWallet() && (
               <Note>
