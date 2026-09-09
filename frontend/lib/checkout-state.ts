@@ -34,7 +34,7 @@ export function nextStep(input: CheckoutInput): CheckoutStep {
   const level = requiredLevel(input.policy, input.amount);
   // Before the allowance, not after: an approval the payer cannot follow with a
   // payment is gas spent for nothing.
-  if (level > 0 && !input.verified) return { kind: "unverified", level };
+  if (level > 0 && !input.verified) return { kind: "unverified", level: level as 1 | 2 };
 
   if (input.allowance < input.amount)
     return { kind: "approve", short: input.amount - input.allowance };
