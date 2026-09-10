@@ -139,7 +139,7 @@ func onVerificationCron(
 	}
 
 	q := queue.NewClient(config.QueueBaseURL, fetchToken.Value, doer)
-	minute := time.Now().Unix() / 60
+	minute := runtime.Now().Unix() / 60
 	pending, err := q.Pending(ctx, minute)
 	if err != nil {
 		return "", fmt.Errorf("pending queue: %w", err)
@@ -170,15 +170,12 @@ func onVerificationCron(
 		}
 
 		existing, err := registry.AttestationOf(donRuntime, attestation_registry.AttestationOfInput{Gate: req.Gate, Wallet: req.Wallet}, nil).Await()
-		if err != nil {
-			runtime.Logger().Warn("attestationOf lookup failed", "gate", req.Gate, "wallet", req.Wallet, "err", err)
-		} else if existing.Level != 0 && existing.Expiry > uint64(time.Now().Unix()) {
+		if err == nil && existing.Level != 0 && existing.Expiry > uint64(runtime.Now().Unix()) {
 			continue
 		}
 
 		att, err := provider.Verify(ctx, req)
 		if err != nil {
-			runtime.Logger().Warn("verification failed", "gate", req.Gate, "wallet", req.Wallet, "err", err)
 			continue
 		}
 
@@ -192,7 +189,7 @@ func onVerificationCron(
 	}
 
 	writer := chain.NewWriter(registry, nil)
-	heartbeat := uint64(time.Now().Unix())
+	heartbeat := uint64(runtime.Now().Unix())
 	if _, err := writer.ReportAttestations(donRuntime, heartbeat, batch, config.gasConfig()).Await(); err != nil {
 		return "", fmt.Errorf("report attestations: %w", err)
 	}
@@ -257,7 +254,7 @@ func onRevocationWebhook(
 	nullifier := [32]byte(common.HexToHash(req.Nullifier))
 
 	writer := chain.NewWriter(registry, nil)
-	heartbeat := uint64(time.Now().Unix())
+	heartbeat := uint64(runtime.Now().Unix())
 	batch := []domain.Entry{{Kind: domain.Revoke, Nullifier: nullifier}}
 
 	if _, err := writer.ReportAttestations(runtime, heartbeat, batch, gasConfig).Await(); err != nil {
