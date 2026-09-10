@@ -1,0 +1,18 @@
+{
+  "chainName": "ethereum-testnet-sepolia-base-1",
+  "registryAddress": "0x0000000000000000000000000000000000000000",
+  "factoryAddress": "0x0000000000000000000000000000000000000000",
+  "gasLimit": 1000000,
+  "schedule": "0 */1 * * * *",
+  "queueBaseUrl": "https://relay.compliancegateway.example",
+  "sumsubBaseUrl": "https://api.sumsub.com",
+  "sumsubAppTokenSecretId": "SUMSUB_APP_TOKEN",
+  "sumsubSecretKeySecretId": "SUMSUB_SECRET_KEY",
+  "sessionIdSecretId": "SESSION_ID_SECRET",
+  "relayFetchTokenSecretId": "RELAY_FETCH_TOKEN",
+  "enclaveNullifierSecretId": "ENCLAVE_NULLIFIER_SECRET",
+  "worldIdBaseUrl": "https://developer.worldcoin.org",
+  "worldIdAppId": "app_production_replace_me",
+  "attestationTtlSeconds": 2592000,
+  "revocationSignerKey": "0x0000000000000000000000000000000000000000"
+}
