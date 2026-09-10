@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/smartcontractkit/chainlink-protos/cre/go/values/pb"
 	"github.com/stretchr/testify/require"
 
 	"github.com/smartcontractkit/cre-sdk-go/capabilities/blockchain/evm"
@@ -108,7 +109,7 @@ func TestOnVerificationCron(t *testing.T) {
 	httpMock.SendRequest = func(_ context.Context, req *crehttp.Request) (*crehttp.Response, error) {
 		switch {
 		case strings.HasPrefix(req.Url, config.QueueBaseURL+"/api/relay/queue"):
-			require.Equal(t, "Bearer test-fetch-token", req.Headers["Authorization"])
+			require.Equal(t, []string{"Bearer test-fetch-token"}, req.MultiHeaders["Authorization"].GetValues())
 			body, _ := json.Marshal(map[string]any{
 				"minute": 1,
 				"items": []map[string]any{
@@ -153,6 +154,7 @@ func TestOnVerificationCron(t *testing.T) {
 
 func paymentOpenedPayload(gate common.Address) *bindings.DecodedLog[gateway_factory.PaymentOpenedDecoded] {
 	return &bindings.DecodedLog[gateway_factory.PaymentOpenedDecoded]{
+		Log: &evm.Log{BlockNumber: pb.NewBigIntFromInt(big.NewInt(1))},
 		Data: gateway_factory.PaymentOpenedDecoded{
 			Gate:   gate,
 			Id:     [32]byte{7},

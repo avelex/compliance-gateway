@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/smartcontractkit/chainlink-protos/cre/go/values/pb"
 
 	"attestor-workflow/contracts/evm/src/generated/attestation_registry"
 	"attestor-workflow/contracts/evm/src/generated/gateway_factory"
@@ -217,7 +218,8 @@ func onPaymentOpened(
 	}
 
 	donRuntime := runtime.UsingTheDons()
-	payment, err := gateway.Payments(donRuntime, merchant_gateway.PaymentsInput{Arg0: id}, nil).Await()
+	blockNumber := pb.NewIntFromBigInt(payload.BlockNumber)
+	payment, err := gateway.Payments(donRuntime, merchant_gateway.PaymentsInput{Arg0: id}, blockNumber).Await()
 	if err != nil {
 		return "", fmt.Errorf("read payment: %w", err)
 	}
