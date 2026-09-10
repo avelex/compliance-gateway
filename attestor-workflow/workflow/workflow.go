@@ -28,19 +28,22 @@ import (
 )
 
 type Config struct {
-	ChainName           string `json:"chainName"`
-	RegistryAddress     string `json:"registryAddress"`
-	FactoryAddress      string `json:"factoryAddress"`
-	GasLimit            uint64 `json:"gasLimit"`
-	Schedule            string `json:"schedule"`
-	QueueBaseURL        string `json:"queueBaseUrl"`
-	SumsubBaseURL       string `json:"sumsubBaseUrl"`
-	SumsubAppTokenID    string `json:"sumsubAppTokenSecretId"`
-	SumsubSecretID      string `json:"sumsubSecretKeySecretId"`
-	WorldIDBaseURL      string `json:"worldIdBaseUrl"`
-	WorldIDAppID        string `json:"worldIdAppId"`
-	AttestationTTL      int64  `json:"attestationTtlSeconds"`
-	RevocationSignerKey string `json:"revocationSignerKey"`
+	ChainName                string `json:"chainName"`
+	RegistryAddress          string `json:"registryAddress"`
+	FactoryAddress           string `json:"factoryAddress"`
+	GasLimit                 uint64 `json:"gasLimit"`
+	Schedule                 string `json:"schedule"`
+	QueueBaseURL             string `json:"queueBaseUrl"`
+	SumsubBaseURL            string `json:"sumsubBaseUrl"`
+	SumsubAppTokenID         string `json:"sumsubAppTokenSecretId"`
+	SumsubSecretID           string `json:"sumsubSecretKeySecretId"`
+	SessionIdSecretID        string `json:"sessionIdSecretId"`
+	RelayFetchTokenID        string `json:"relayFetchTokenSecretId"`
+	EnclaveNullifierSecretID string `json:"enclaveNullifierSecretId"`
+	WorldIDBaseURL           string `json:"worldIdBaseUrl"`
+	WorldIDAppID             string `json:"worldIdAppId"`
+	AttestationTTL           int64  `json:"attestationTtlSeconds"`
+	RevocationSignerKey      string `json:"revocationSignerKey"`
 }
 
 func (c *Config) evmClient() (*evm.Client, error) {
@@ -120,9 +123,24 @@ func onVerificationCron(
 ) (string, error) {
 	ctx := context.Background()
 	doer := creteehttp.New(runtime)
+	donRuntime := runtime.UsingTheDons()
 
-	q := queue.NewHTTPQueue(config.QueueBaseURL, doer)
-	pending, err := q.Pending(ctx)
+	fetchToken, err := runtime.GetSecret(&cre.SecretRequest{Id: config.RelayFetchTokenID}).Await()
+	if err != nil {
+		return "", fmt.Errorf("relay fetch token secret: %w", err)
+	}
+	sessionIdSecret, err := runtime.GetSecret(&cre.SecretRequest{Id: config.SessionIdSecretID}).Await()
+	if err != nil {
+		return "", fmt.Errorf("session id secret: %w", err)
+	}
+	enclaveNullifierSecret, err := runtime.GetSecret(&cre.SecretRequest{Id: config.EnclaveNullifierSecretID}).Await()
+	if err != nil {
+		return "", fmt.Errorf("enclave nullifier secret: %w", err)
+	}
+
+	q := queue.NewClient(config.QueueBaseURL, fetchToken.Value, doer)
+	minute := time.Now().Unix() / 60
+	pending, err := q.Pending(ctx, minute)
 	if err != nil {
 		return "", fmt.Errorf("pending queue: %w", err)
 	}
@@ -131,7 +149,12 @@ func onVerificationCron(
 	if err != nil {
 		return "", fmt.Errorf("sumsub client: %w", err)
 	}
-	sumsubProvider := &verifier.SumsubProvider{Client: sumsubClient, TTL: attestationTTL(config)}
+	sumsubProvider := &verifier.SumsubProvider{
+		Client:        sumsubClient,
+		TTL:           attestationTTL(config),
+		SessionSecret: sessionIdSecret.Value,
+		EnclaveSecret: []byte(enclaveNullifierSecret.Value),
+	}
 	worldIDProvider := &verifier.WorldIDProvider{BaseURL: config.WorldIDBaseURL, AppID: config.WorldIDAppID, HTTPClient: doer, TTL: attestationTTL(config)}
 
 	batch := make([]domain.Entry, 0, len(pending))
@@ -143,6 +166,13 @@ func onVerificationCron(
 		case verifier.SumsubLevel:
 			provider = sumsubProvider
 		default:
+			continue
+		}
+
+		existing, err := registry.AttestationOf(donRuntime, attestation_registry.AttestationOfInput{Gate: req.Gate, Wallet: req.Wallet}, nil).Await()
+		if err != nil {
+			runtime.Logger().Warn("attestationOf lookup failed", "gate", req.Gate, "wallet", req.Wallet, "err", err)
+		} else if existing.Level != 0 && existing.Expiry > uint64(time.Now().Unix()) {
 			continue
 		}
 
@@ -161,7 +191,6 @@ func onVerificationCron(
 		})
 	}
 
-	donRuntime := runtime.UsingTheDons()
 	writer := chain.NewWriter(registry, nil)
 	heartbeat := uint64(time.Now().Unix())
 	if _, err := writer.ReportAttestations(donRuntime, heartbeat, batch, config.gasConfig()).Await(); err != nil {

@@ -7,5 +7,5 @@ import (
 )
 
 type RequestQueue interface {
-	Pending(ctx context.Context) ([]domain.VerificationRequest, error)
+	Pending(ctx context.Context, minute int64) ([]domain.VerificationRequest, error)
 }

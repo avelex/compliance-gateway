@@ -50,27 +50,33 @@ func stubPaymentsRead(t *testing.T, evmMock *evmmock.ClientCapability, maxRisk u
 
 func testConfig() *Config {
 	return &Config{
-		ChainName:           "ethereum-testnet-sepolia-base-1",
-		RegistryAddress:     "0x0000000000000000000000000000000000000001",
-		FactoryAddress:      "0x0000000000000000000000000000000000000002",
-		GasLimit:            1000000,
-		Schedule:            "0 */1 * * * *",
-		QueueBaseURL:        "https://relay.test",
-		SumsubBaseURL:       "https://api.sumsub.test",
-		SumsubAppTokenID:    "SUMSUB_APP_TOKEN",
-		SumsubSecretID:      "SUMSUB_SECRET_KEY",
-		WorldIDBaseURL:      "https://worldid.test",
-		WorldIDAppID:        "app_test",
-		AttestationTTL:      3600,
-		RevocationSignerKey: "0x0000000000000000000000000000000000000003",
+		ChainName:                "ethereum-testnet-sepolia-base-1",
+		RegistryAddress:          "0x0000000000000000000000000000000000000001",
+		FactoryAddress:           "0x0000000000000000000000000000000000000002",
+		GasLimit:                 1000000,
+		Schedule:                 "0 */1 * * * *",
+		QueueBaseURL:             "https://relay.test",
+		SumsubBaseURL:            "https://api.sumsub.test",
+		SumsubAppTokenID:         "SUMSUB_APP_TOKEN",
+		SumsubSecretID:           "SUMSUB_SECRET_KEY",
+		SessionIdSecretID:        "SESSION_ID_SECRET",
+		RelayFetchTokenID:        "RELAY_FETCH_TOKEN",
+		EnclaveNullifierSecretID: "ENCLAVE_NULLIFIER_SECRET",
+		WorldIDBaseURL:           "https://worldid.test",
+		WorldIDAppID:             "app_test",
+		AttestationTTL:           3600,
+		RevocationSignerKey:      "0x0000000000000000000000000000000000000003",
 	}
 }
 
 func testSecrets() testutils.Secrets {
 	return testutils.Secrets{
 		cre.DefaultSecretNamespace: {
-			"SUMSUB_APP_TOKEN":  "app-token",
-			"SUMSUB_SECRET_KEY": "secret-key",
+			"SUMSUB_APP_TOKEN":         "app-token",
+			"SUMSUB_SECRET_KEY":        "secret-key",
+			"SESSION_ID_SECRET":        "0000000000000000000000000000000000000000000000000000000000000001",
+			"RELAY_FETCH_TOKEN":        "test-fetch-token",
+			"ENCLAVE_NULLIFIER_SECRET": "enclave-secret",
 		},
 	}
 }
@@ -101,9 +107,13 @@ func TestOnVerificationCron(t *testing.T) {
 	require.NoError(t, err)
 	httpMock.SendRequest = func(_ context.Context, req *crehttp.Request) (*crehttp.Response, error) {
 		switch {
-		case req.Url == config.QueueBaseURL+"/api/verify/queue":
-			body, _ := json.Marshal([]map[string]any{
-				{"gate": "0x0000000000000000000000000000000000000004", "wallet": "0x0000000000000000000000000000000000000005", "level": 2},
+		case strings.HasPrefix(req.Url, config.QueueBaseURL+"/api/relay/queue"):
+			require.Equal(t, "Bearer test-fetch-token", req.Headers["Authorization"])
+			body, _ := json.Marshal(map[string]any{
+				"minute": 1,
+				"items": []map[string]any{
+					{"gate": "0x0000000000000000000000000000000000000004", "wallet": "0x0000000000000000000000000000000000000005", "level": 2},
+				},
 			})
 			return &crehttp.Response{StatusCode: 200, Body: body}, nil
 		default:
@@ -112,6 +122,11 @@ func TestOnVerificationCron(t *testing.T) {
 				"review": map[string]any{
 					"reviewStatus": "completed",
 					"reviewResult": map[string]any{"reviewAnswer": "GREEN"},
+				},
+				"info": map[string]any{
+					"idDocs": []map[string]any{
+						{"country": "USA", "idDocType": "PASSPORT", "number": "X123"},
+					},
 				},
 			})
 			return &crehttp.Response{StatusCode: 200, Body: body}, nil

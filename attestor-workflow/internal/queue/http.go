@@ -12,16 +12,21 @@ import (
 	"attestor-workflow/internal/httpx"
 )
 
-type HTTPQueue struct {
-	BaseURL string
-	Client  httpx.Doer
+type PendingQueueClient struct {
+	BaseURL            string
+	authorizationToken string
+	Client             httpx.Doer
 }
 
-func NewHTTPQueue(baseURL string, client httpx.Doer) *HTTPQueue {
-	return &HTTPQueue{BaseURL: baseURL, Client: client}
+func NewClient(baseURL, fetchToken string, client httpx.Doer) *PendingQueueClient {
+	return &PendingQueueClient{
+		BaseURL:            baseURL,
+		authorizationToken: fetchToken,
+		Client:             client,
+	}
 }
 
-var _ RequestQueue = (*HTTPQueue)(nil)
+var _ RequestQueue = (*PendingQueueClient)(nil)
 
 type wireRequest struct {
 	Gate    string               `json:"gate"`
@@ -30,11 +35,17 @@ type wireRequest struct {
 	WorldID *domain.WorldIDProof `json:"worldId,omitempty"`
 }
 
-func (q *HTTPQueue) Pending(ctx context.Context) ([]domain.VerificationRequest, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, q.BaseURL+"/api/verify/queue", nil)
+type wireResponse struct {
+	Minute int64         `json:"minute"`
+	Items  []wireRequest `json:"items"`
+}
+
+func (q *PendingQueueClient) Pending(ctx context.Context, minute int64) ([]domain.VerificationRequest, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/relay/queue?minute=%d", q.BaseURL, minute), nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Authorization", "Bearer "+q.authorizationToken)
 
 	resp, err := q.Client.Do(req)
 	if err != nil {
@@ -46,13 +57,13 @@ func (q *HTTPQueue) Pending(ctx context.Context) ([]domain.VerificationRequest, 
 		return nil, fmt.Errorf("queue: unexpected status %d", resp.StatusCode)
 	}
 
-	var wire []wireRequest
+	var wire wireResponse
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
 		return nil, err
 	}
 
-	out := make([]domain.VerificationRequest, len(wire))
-	for i, w := range wire {
+	out := make([]domain.VerificationRequest, len(wire.Items))
+	for i, w := range wire.Items {
 		out[i] = domain.VerificationRequest{
 			Gate:    common.HexToAddress(w.Gate),
 			Wallet:  common.HexToAddress(w.Wallet),

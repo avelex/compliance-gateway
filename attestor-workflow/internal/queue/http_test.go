@@ -11,16 +11,22 @@ import (
 
 func TestHTTPQueuePending(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/verify/queue" {
+		if r.URL.Path != "/api/relay/queue" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			t.Fatalf("unexpected authorization header: %s", r.Header.Get("Authorization"))
+		}
+		if r.URL.Query().Get("minute") != "29290500" {
+			t.Fatalf("unexpected minute: %s", r.URL.Query().Get("minute"))
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"gate":"0x0000000000000000000000000000000000000001","wallet":"0x0000000000000000000000000000000000000002","level":2}]`))
+		w.Write([]byte(`{"minute":29290500,"items":[{"gate":"0x0000000000000000000000000000000000000001","wallet":"0x0000000000000000000000000000000000000002","level":2}]}`))
 	}))
 	defer server.Close()
 
-	q := NewHTTPQueue(server.URL, server.Client())
-	got, err := q.Pending(context.Background())
+	q := NewClient(server.URL, "test-token", server.Client())
+	got, err := q.Pending(context.Background(), 29290500)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,8 +47,8 @@ func TestHTTPQueuePendingErrorStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	q := NewHTTPQueue(server.URL, server.Client())
-	if _, err := q.Pending(context.Background()); err == nil {
+	q := NewClient(server.URL, "test-token", server.Client())
+	if _, err := q.Pending(context.Background(), 0); err == nil {
 		t.Fatal("expected error on non-200 status")
 	}
 }

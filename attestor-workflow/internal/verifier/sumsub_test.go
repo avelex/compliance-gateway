@@ -15,13 +15,15 @@ import (
 
 func TestSumsubProviderVerifyApproved(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"id":"applicant-1","review":{"reviewStatus":"completed","reviewResult":{"reviewAnswer":"GREEN"}}}`))
+		w.Write([]byte(`{"id":"applicant-1","review":{"reviewStatus":"completed","reviewResult":{"reviewAnswer":"GREEN"}},"info":{"idDocs":[{"country":"USA","idDocType":"PASSPORT","number":"X123"}]}}`))
 	}))
 	defer server.Close()
 
 	p := &SumsubProvider{
-		Client: &sumsubapi.Client{BaseURL: server.URL, AppToken: "t", SecretKey: "s", HTTPClient: server.Client()},
-		TTL:    24 * time.Hour,
+		Client:        &sumsubapi.Client{BaseURL: server.URL, AppToken: "t", SecretKey: "s", HTTPClient: server.Client()},
+		TTL:           24 * time.Hour,
+		SessionSecret: "0000000000000000000000000000000000000000000000000000000000000001",
+		EnclaveSecret: []byte("enclave-secret"),
 	}
 
 	req := domain.VerificationRequest{Gate: common.HexToAddress("0x1"), Wallet: common.HexToAddress("0x2"), Level: SumsubLevel}
