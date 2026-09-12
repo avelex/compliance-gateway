@@ -1,59 +1,50 @@
-# ComplianceGateway
+# Deflow
 
-Confidential compliance gateway for crypto checkouts that keeps identity out of the chain.
+The non-custodial compliance gateway for crypto checkouts. 
+
+Enforce KYC/AML checks in real time, before funds ever hit your wallet.
 
 ## Purpose
 
-Let any merchant – a regulated emitent or a webshop, accept stablecoin payments under a
-compliance policy they choose, without the merchant, the platform or the chain ever seeing the
-payer's (customer's) documents.
+Let any merchant – regulated institution or SaaS, accept stablecoin payments safely and legally. You get clean money and zero data liability, while your customers retain absolute privacy.
 
 ## Problem
 
-Accept crypto long enough and a sanctioned address will pay you. You find out from your bank, your CEX, your processor or your regulator — after the money is already sitting in your account, looking exactly like the rest of it.
+Accept crypto long enough and a sanctioned address **will** pay you. You find out from your bank, your CEX, your processor or your regulator — after the money is already sitting in your account. Damage is already done, but crypto payments are irreversible.
 
-That leaves merchants three bad options:
+Today, merchants are forced into three broken compromises:
 
-- **Hand it to a custodial PSP.** They take a cut, hold your funds, and keep your customers' passports in their database. Their breach is your headline.
-- **KYC everyone.** Now you run a document-collection business you never wanted, and a chunk of your customers walk away at the upload screen.
-- **Screen nothing and hope.** Free address oracles only flag addresses that are themselves on the OFAC list. Funds that came through a mixer two hops ago pass as clean.
+1. **Hand custody to a centralized PSP.** They take a cut, hold your funds, and keep your customers' passports in their database. Their breach is your headline.
+2. **Build a DIY stack.** Sumsub and Chainalysis score risk, but cannot move tokens. If funds hit your wallet before the API answers, your address is already burned. Connecting them to smart contracts forces you to build custom escrow and maintain a backend signer.
+3. **Screen nothing and hope.** Free address oracles only flag addresses that are themselves on the OFAC list. Funds that passed through Tornado Cash, a cross-chain bridge exploit, or a mixer two hops ago pass straight through as "clean".
 
 The customer's side is no better: the same passport photo scattered across a dozen merchant
 dashboards, or an on-chain "verified" badge that permanently links every wallet they will ever own.
 
 ---
 
-**ComplianceGateway** addresses this problem by providing the non-custodial payment gateway
-that runs KYC and AML inside a confidential enclave: screening is on from the very first payment and
-takes no integration work. No document ever reaches the merchant, the chain or us. And the money
-is never ours to hold, at any point, by design.
+**Deflow** addresses this problem by providing the non-custodial payment gateway that runs KYC and AML inside a confidential enclave. Screening works out of the box from your very first payment. No sensitive documents ever reach you, us, or the blockchain. And the money is never ours to hold, at any point, by design.
 
 ## Solution
 
-Three kinds of data, three different places to check them:
+Deflow bridges the gap between regulatory requirements and Web3 privacy. We separate fund flow from compliance screening: money moves strictly between payer and merchant contracts, while checks run in an isolated enclave.
 
-| Data | What it really is | Where it gets checked |
-|---|---|---|
-| Address on a sanctions list | public information | free oracle, inline in `pay()` |
-| Where the funds came from | paid API and a trade secret | TEE-enclave |
-| Who the payer is | passport-grade personal data | TEE-enclave |
+### Features
 
-**Screening is mandatory, identity is optional.** A new gateway ships as "screen the money, ask
-nothing else". The merchant turns on KYC when their business actually needs it.
+- **Non-custodial**: Deflow never takes custody of funds. Payments go into the merchant’s dedicated smart contract (`MerchantGateway`) during a short screening window. The contract has only two exits: forward to the merchant on approval, or refund to the payer if flagged or timed out. Funds cannot be frozen.
 
-**The chain never sees a person.** Documents are checked inside a Chainlink CRE confidential
-workflow running in a TEE. What comes out is one opaque number — a `nullifier` — plus a level and an
-expiry date. No name, no country, no document, no risk score.
+- **Zero Data Liability**: Personal documents and paid AML intelligence never touch the merchant's servers, Deflow's backend, or the blockchain. Verification executes inside a Chainlink CRE enclave (TEE). The blockchain only ever receives an opaque, single-use `nullifier`, a verified tier, and an expiry timestamp.
 
-**Non-custodial — we never hold your money.**  Funds go straight into the merchant's own gateway contract, wait there for the length of one screening window, and leave through one of exactly two exits: **the merchant, or back to the payer**.
+- **Compliance**: Deflow runs automated sanctions and fund provenance (KYT) checks out of the box for every payments in real time. Merchants toggle identity checks (Sumsub / World ID) only when transaction thresholds or local jurisdictions require it.
 
-### What each side gets
 
-**Merchant** — a payment gateway of your own in one click, no-code, no documents in your database, no custodian holding your money. Funds can only ever go to you or back to the payer.
+### Value Proposition
 
-**Customer** — your passport goes to the verification provider and nowhere else. Two merchants cannot tell you are the same person. If a payment fails screening, the refund is automatic.
+- **For Merchants:** Payment gateway of your own in one click, no-code, no documents in your database, no custodian holding your money. Funds can only ever go to you or back to the payer.
 
-**Compliance** — sanctions and provenance screening on every payment, a per-person daily limit that survives a wallet change, and revocation that kills all of a person's wallets at once.
+- **For Customers:** Absolute privacy. Your passport is verified once, never stored on-chain, and merchants cannot cross-reference your wallets or purchase history. If a payment fails screening, the refund is automatic.
+
+- **For Compliance Teams:** Real-time enforcement, automated audit logs, per-person (anti-Sybil) velocity limits across multiple wallets, and instant revocation by nullifier.
 
 
 ## Architecture
@@ -65,12 +56,12 @@ expiry date. No name, no country, no document, no risk score.
 **Verification** — once per wallet, and only if the merchant asks for it:
 
 0. Customer opens the merchant's checkout and connects an ordinary wallet.
-1. Checkout drops a request `{gateway, wallet, level}` into the Relayer queue. Documents go from the Sumsub widget straight to Sumsub — they never pass through our backend.
+1. Checkout drops a request `{gateway, wallet}` into the Relayer queue. Documents go from the Sumsub widget straight to Sumsub — they never pass through our backend.
 2. Once a minute the enclave pulls a snapshot of that queue itself.
 3. Inside the enclave: Sumsub lookup — documents, sanctions, PEP, adverse media.
 4. For level 1 it is World ID Selfie Check instead — proof bound to the wallet address.
 5. The enclave derives the `nullifier` from the document and the merchant's gateway address, and reports `{nullifier, level, expiry}` through DON consensus.
-6. `KeystoneForwarder` checks the DON signatures and writes grants, revocations and the heartbeat into `AttestationRegistry` in one batch.
+6. Chainlink's `KeystoneForwarder` checks the DON signatures and writes grants, revocations and the heartbeat into `AttestationRegistry` in one batch.
 7. Checkout sees the result as an on-chain event.
 
 **Payment**
@@ -97,7 +88,7 @@ expiry date. No name, no country, no document, no risk score.
 |---|---|
 | Confidential compute | Chainlink CRE Confidential Workflow (TEE), Go |
 | Secrets | Chainlink Vault DON |
-| On-chain | Solidity, Base Sepolia + Arc testnet, USDC |
+| On-chain | Solidity, Base Sepolia, USDC and EURC|
 | Frontend | Next.js (checkout + merchant dashboard) |
 | Merchant custody | Privy Organization Wallets, policy engine, m-of-n key quorums |
 
@@ -105,24 +96,21 @@ expiry date. No name, no country, no document, no risk score.
 
 | Component | Owner | Role |
 |---|---|---|
-| `attestor-workflow` (Go) | us | CRE confidential workflow: verification, nullifier derivation, provenance screening, revocation, heartbeat |
-| `AttestationRegistry.sol` | us | `keccak(gateway, wallet) → {nullifier, level, expiry}`, `revokedNullifier`, `lastHeartbeat`. Written only by the workflow via the forwarder |
-| `GatewayFactory.sol` | us | Deploys merchant gateways; **the only emitter of `PaymentOpened`** |
-| `MerchantGateway.sol` | merchant | Policy, pending window, `settle` / `reclaim`, cumulative spend per nullifier |
-| `relay` (Next.js API route) | us | Queue of verification requests and webhooks + Sumsub WebSDK token minting. A dumb pipe: no enclave key, no read scope on Sumsub, signs nothing on-chain |
-| `checkout` / `dashboard` | us | Payer flow; merchant onboarding, policy, attestation and payment lists |
+| `attestor-workflow` | us | CRE confidential workflow: verification, nullifier derivation, provenance screening, revocation, heartbeat |
+| `AttestationRegistry.sol` | us | Attestation registry, written only by the CRE workflow |
+| `GatewayFactory.sol` | us | Deploys merchant gateways |
+| `MerchantGateway.sol` | merchant | Policy, clearing window, `settle` by the CRE workflow, `reclaim` by payer|
+| `relay` | us | Queue of verification requests and webhooks + Sumsub WebSDK token minting. A dumb pipe: no enclave key, no read scope on Sumsub, signs nothing on-chain |
+| `checkout` / `dashboard` | us | Payer flow, merchant onboarding, policy, attestation and payment lists |
 
 ### External Providers
 
 | Provider | Used for | Notes |
 |---|---|---|
-| Sumsub | KYC documents, AML on the person, ongoing monitoring | sandbox; two app tokens — create-only for the relayer, read-only for the enclave |
-| Sumsub Crypto Monitoring | fund provenance (KYT) | enclave key; billed per payment |
-| World ID | Selfie Check — level 1 liveness + uniqueness | plain REST, no SDK, `signal` = wallet |
-| Chainalysis Sanctions Oracle | OFAC SDN address screening | keyless, free, called directly from the gateway |
-| Chainlink Vault DON | enclave secrets | delivered straight into the TEE |
+| Chainlink | CRE Confidential Workflow, enclave secrets | running inside the TEE |
 | Privy | merchant organization wallet, policy engine, key quorums | `setPolicy` also works with a plain owner signature; quorum is an add-on |
-
+| Sumsub | KYC documents, AML on the person | sandbox; two app tokens — create-only for the relayer, read-only for the enclave |
+| GoPlus | fund provenance (KYT) | billed per payment |
 
 ## Roadmap
 
