@@ -1,13 +1,14 @@
-"""Independent check of a Payment Passport PDF: uses only the PDF and its attached JSON.
+"""Independent check of a Payment Passport: uses only the PDF and its attached JSON, or a JSON copy.
 
 Recomputes the copy hash, rebuilds the salted hash tree to the master root and the evidence root,
-and compares them with the values stated in the attached integrity block and printed in the PDF text.
+and compares them with the values stated in the integrity block (and, for a PDF, printed in its text).
+
+    python verify_pack.py passport.pdf        # needs pypdf
+    python verify_pack.py passport.json       # a JSON projection as issued by compliance-backend
 """
 import hashlib
 import json
 import sys
-
-from pypdf import PdfReader
 
 EVIDENCE_KEYS = ["pack_id", "payment_ref", "onchain", "travel_rule", "wallet_ownership", "kyt",
                  "sanctions", "structuring", "issuer", "rules"]
@@ -39,26 +40,37 @@ def node(v, salts, path=""):
     return sha(canon([node(x, salts, join(path, i)) for i, x in enumerate(v)]))
 
 
-def check(pdf_path):
-    reader = PdfReader(pdf_path)
-    atts = {name: blobs[0] for name, blobs in reader.attachments.items()}
-    text = " ".join(p.extract_text() for p in reader.pages).replace("\n", "")
-    name = next(n for n in atts if n.startswith("passport_"))
-    copy = json.loads(atts[name])
+def check_copy(copy, reporting=None, text=None):
+    """Checks one pack copy (a dict with data, salts and integrity); reporting records and PDF text are optional."""
+    copy = dict(copy)
     integ = copy.pop("integrity")
     data, salts = copy["data"], copy["salts"]
     results = {
         "copy hash": sha(canon(copy)) == integ["projection_hash"],
         "master root": node(data, salts) == integ["master_root"],
         "evidence root": sha(canon({k: node(data[k], salts, k) for k in EVIDENCE_KEYS})) == integ["evidence_root"],
-        "printed in PDF": all(integ[k] in text for k in ("projection_hash", "master_root", "evidence_root")),
     }
-    for n, blob in atts.items():
-        if n.startswith("reporting_"):
-            rep = json.loads(blob)
+    if text is not None:
+        results["printed in PDF"] = all(integ[k] in text for k in ("projection_hash", "master_root", "evidence_root"))
+    for rep in reporting or []:
+        if text is not None:
             results["reporting record hash printed"] = sha(canon(rep)) in text
-            results["reporting linked to master root"] = rep["pack_master_root"] == integ["master_root"]
-    return name, results
+        results["reporting linked to master root"] = rep["pack_master_root"] == integ["master_root"]
+    return results
+
+
+def check(path):
+    if path.endswith(".json"):
+        with open(path, encoding="utf-8") as f:
+            return path.rsplit("/", 1)[-1], check_copy(json.load(f))
+    from pypdf import PdfReader  # only PDFs need it
+
+    reader = PdfReader(path)
+    atts = {name: blobs[0] for name, blobs in reader.attachments.items()}
+    text = " ".join(p.extract_text() for p in reader.pages).replace("\n", "")
+    name = next(n for n in atts if n.startswith("passport_"))
+    reporting = [json.loads(blob) for n, blob in atts.items() if n.startswith("reporting_")]
+    return name, check_copy(json.loads(atts[name]), reporting, text)
 
 
 if __name__ == "__main__":
