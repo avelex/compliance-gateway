@@ -1,0 +1,399 @@
+{
+  "schema_version": "deflow-evidence/1.0",
+  "specimen": true,
+  "pack_id": "8c1e6f2a-1b7d-4c55-9a0e-3f0d2b9e7a11",
+  "profile": "OFF_RAMP",
+  "prepared_for": "Example Off-ramp B.V.",
+  "purpose": "Source-of-funds request RFI-2026-0916-033",
+  "generated_at": "2026-09-16T09:12:40Z",
+  "data": {
+    "pack_id": "8c1e6f2a-1b7d-4c55-9a0e-3f0d2b9e7a11",
+    "pack_version": "1",
+    "schema_version": "deflow-evidence/1.0",
+    "created_at": "2026-09-15T10:44:06Z",
+    "payment_ref": "INV-2041-000918",
+    "merchant_id": "m_2041",
+    "processor": {
+      "legal_name": "ExamplePay UAB",
+      "lei": "984500EXAMPLE0000001",
+      "casp_id": "LT-CASP-2026-0042",
+      "nca": "Bank of Lithuania",
+      "rfi_channel": "compliance@examplepay.example",
+      "cert_url": "https://evidence.examplepay.example/keys"
+    },
+    "onchain": {
+      "chain_name": "Base",
+      "chain_id": 8453,
+      "token": "USDC",
+      "token_contract": "0x08b0c9838baf09aaa14b295b269aca50fb62f44f",
+      "amount": "1450.00",
+      "fx_rate_eur": "0.9210",
+      "amount_eur": "1335.45",
+      "fx_source": "ECB euro reference rate of 2026-09-14",
+      "fx_at": "2026-09-15T10:42:17Z",
+      "payer_address": "0x9236f5cd7e2e391e086119059b289f81a9f17aec",
+      "deposit_contract": "0x52a6623dc8013e9397ae4c911efb6af4b638078c",
+      "tx_hash": "0xe3c3619483cb05f52cd74d72ddd756e225c1c1b1c787cf9be7a1ff5eba600475",
+      "block_number": 51236417,
+      "block_timestamp": "2026-09-15T10:42:17Z",
+      "log_index": 57,
+      "confirmations": 54
+    },
+    "travel_rule": {
+      "standard": "IVMS101.2023",
+      "collected_at": "2026-09-15T10:39:02Z",
+      "collected_before_payment": true,
+      "originator": {
+        "type": "NATURAL_PERSON",
+        "name": "Anna BEISPIEL",
+        "identifier": {
+          "$withheld": "2938c82660f12d1ed7117d13e6d5db61b528a08b2cb6e783201c08bcd1e24786"
+        },
+        "identifier_type": {
+          "$withheld": "a0e24943f55b3f62e0ff27bd95ba2eda1af11e05db1efb68bd963255a81e92be"
+        },
+        "country": "DE",
+        "account": "0x9236f5cd7e2e391e086119059b289f81a9f17aec"
+      },
+      "originator_vasp": null,
+      "protocol": null,
+      "beneficiary": {
+        "name": {
+          "$withheld": "81dbf39f83fd8d2dac1585ec6f818e991635a109cc3d914ffb313584c926a1f9"
+        }
+      },
+      "wallet_type": "SELF_HOSTED",
+      "wallet_type_method": "blockchain analytics: no attributed service",
+      "completeness": "COMPLETE"
+    },
+    "wallet_ownership": {
+      "required": true,
+      "reason": "Self-hosted address; amount above EUR 1,000",
+      "method": "EIP-4361 (SIWE) message, EIP-191 signature",
+      "message": "pay.examplepay.example wants you to sign in with your Ethereum account:\n0x9236f5cd7e2e391e086119059b289f81a9f17aec\n\nI confirm I control this address for payment INV-2041-000918.\n\nURI: https://pay.examplepay.example/checkout/INV-2041-000918\nVersion: 1\nChain ID: 8453\nNonce: q8Zr2LmPw4Xa\nIssued At: 2026-09-15T10:39:40Z\nExpiration Time: 2026-09-15T10:49:40Z",
+      "message_sha256": "079d69dc805c74b8682102f1b5554da585be1f8f5d232586679d1e1fa23b324c",
+      "domain": "pay.examplepay.example",
+      "nonce": "q8Zr2LmPw4Xa",
+      "chain_id": 8453,
+      "issued_at": "2026-09-15T10:39:40Z",
+      "expires_at": "2026-09-15T10:49:40Z",
+      "signature": "0xb191ae5acec6ce99afc59886802f10db86886656a0fc15bee70e91f073057707486bcdef299cf4505f4cc76ba6ad414ba6eb786748ff5cbb2f49848692d0ae5744",
+      "result": "VALID",
+      "verified_at": "2026-09-15T10:39:44Z",
+      "verified_block": null,
+      "prior_pack_id": null
+    },
+    "kyt": {
+      "provider": "Chainalysis",
+      "product": "KYT",
+      "api_version": {
+        "$withheld": "5be0e63ba1708e22a82a361d4c930dfdf5d28cb966d146d95efc8487228af463"
+      },
+      "external_ref": {
+        "$withheld": "0974b9f57aa4ecc12e358cd14414d7463c6513629769d7dbe86ac5b806d63b77"
+      },
+      "screened_at": "2026-09-15T10:42:31Z",
+      "risk_level": "LOW",
+      "alerts": [],
+      "exposures": [
+        {
+          "category": "exchange",
+          "exposure": "INDIRECT",
+          "direction": "RECEIVED",
+          "share_pct": "92.4",
+          "value_usd": "1339.80"
+        },
+        {
+          "category": "unnamed service",
+          "exposure": "INDIRECT",
+          "direction": "RECEIVED",
+          "share_pct": "7.6",
+          "value_usd": "110.20"
+        }
+      ],
+      "raw_response_sha256": {
+        "$withheld": "840fddc14b68055ca9481b6830a0955d242ede682ad20681385afa5914d11214"
+      }
+    },
+    "sanctions": {
+      "fields_screened": "Originator name, identifier and country; payer address and its direct counterparties",
+      "algorithm": {
+        "$withheld": "25c1bc92fc840a20337b465094465bff01244aab5fbece607f01490fadb1162a"
+      },
+      "threshold": {
+        "$withheld": "5411971c5903b17224405e36f82359ea2c4d5f392733fa1b83a1573c1b954959"
+      },
+      "calibration_version": {
+        "$withheld": "60eba680d00025e6c16fe2f13d9c5ddb03c9e6359273c3a24e1105db638d82a9"
+      },
+      "lists": [
+        {
+          "name": "EU Consolidated Financial Sanctions List",
+          "version": "2026-09-14",
+          "loaded_at": "2026-09-14T06:00:12Z"
+        },
+        {
+          "name": "Lithuania national list",
+          "version": "2026-09-10",
+          "loaded_at": "2026-09-10T06:00:08Z"
+        },
+        {
+          "name": "UN Security Council Consolidated List",
+          "version": "2026-09-12",
+          "loaded_at": "2026-09-12T06:00:05Z"
+        },
+        {
+          "name": "OFAC SDN incl. digital currency addresses (by policy)",
+          "version": "2026-09-12",
+          "loaded_at": "2026-09-12T18:00:03Z"
+        }
+      ],
+      "screened_at": "2026-09-15T10:42:33Z",
+      "result": "NO_MATCH",
+      "matched_on": {
+        "$withheld": "d330f94b6f797aae522d7b901ab0d779bac263864c433a2c29f71b49eb25a822"
+      },
+      "alert_analysis": {
+        "$withheld": "cd0d72144fd88e8cf37bddc81a6cf2d11e9c0d5a39670b42eda50b9413343451"
+      },
+      "reviewer": {
+        "$withheld": "49ce4d5d2cb41da735021079df393a3fa517b740821562739378cfee192d1394"
+      },
+      "second_reviewer": {
+        "$withheld": "a89fbc6bdad135ed29dde664842eb16c6a21cfa18dc38a62c69c71e26e18885a"
+      }
+    },
+    "structuring": {
+      "rule_id": {
+        "$withheld": "8ada2c2f0daf4d9dc18cec4733d4a41eea3ecccee66d314ec48c5452307fef5f"
+      },
+      "window": {
+        "$withheld": "66d5263f7ce8b9f368adfb589160ffb2e484919fbb990e37b4d4a880a644def7"
+      },
+      "thresholds": {
+        "$withheld": "fa19e3ee565d70159b20f6b7f82f11da22c97127ffcc3e59b47bcc42294af749"
+      },
+      "linked_count": {
+        "$withheld": "2e5b6c35dff45ed9b3c5ef5a4517e6bdee81406fc96a72771f6c171d4d7bdd78"
+      },
+      "linked_pack_ids": {
+        "$withheld": "ef2dbf965c34f8e391f427d95449df08147f1966607da9819c42e0ca6c24633f"
+      },
+      "features": {
+        "$withheld": "f6782480db509b36bf070cf65e3e86b79fd4ffad3904fb49e1cf64452be3e452"
+      },
+      "score": {
+        "$withheld": "2c8bfed69887300de8535da1118a993e9d611ef0497a5bfda9c686bd6bf1d871"
+      },
+      "result": "PASS",
+      "evaluated_at": "2026-09-15T10:42:33Z"
+    },
+    "issuer": {
+      "checked": "Payer address and deposit contract",
+      "block": 51236417,
+      "result": "NOT_LISTED",
+      "checked_at": "2026-09-15T10:42:33Z"
+    },
+    "rules": {
+      "rules_version": "2026.09.2",
+      "ruleset_hash": "3dd3599276343418e608b5f78e29d0e7daf8e3983c94b9d2b33eca6306246d66",
+      "approved_by": {
+        "$withheld": "693f72ac8ec21bfbf8ca61424ccde06938060676ab8b0b40a4bb3534c201d9d0"
+      },
+      "effective_from": "2026-09-01T00:00:00Z",
+      "engine_version": {
+        "$withheld": "ca729e27bf429ee19667a687f298de8484fab801cd60cd41c52b82590432b1bc"
+      },
+      "thresholds": {
+        "$withheld": "427c29f5953e6f80cc27c779dac2eb9ad0e16ee0902ffba2d69e3b421fe18fb0"
+      },
+      "recommendation": {
+        "$withheld": "5011045b92c2cca55f961a3d17bd0e5455ffe8aed86ab14fcc8d3096e5a7af8a"
+      }
+    },
+    "timeline": {
+      "onchain": [
+        {
+          "at": "2026-09-15T10:42:17Z",
+          "event": "Payment received in deposit contract",
+          "onchain_status": "PENDING",
+          "ref": "0xe3c3619483cb05f52cd74d72ddd756e225c1c1b1c787cf9be7a1ff5eba600475",
+          "source": "CHAIN"
+        },
+        {
+          "at": "2026-09-15T10:44:05Z",
+          "event": "Decision executed by contract",
+          "onchain_status": "CREDITED",
+          "ref": "0xb2fcb00e8887187afecc33d5170142b9ad9ad33b848044c1dd39be2c5f41892b",
+          "source": "CHAIN"
+        }
+      ],
+      "offchain": {
+        "$withheld": "b4fc17fc5558c93a0b9f65afc1a17a10df31e74d5a3fa4d02088cda5d9378afe"
+      }
+    },
+    "decision": {
+      "decision": "CREDIT",
+      "mode": {
+        "$withheld": "24eccbce5cf2d85f0ee423e47fa67b28c421e0f63ae702b41d023cd475947908"
+      },
+      "policy_ref": {
+        "$withheld": "fcf170a194e4530f9c20a8cd3a886bcf17ae87edd6403666a708784d09fcec26"
+      },
+      "reason_codes": {
+        "$withheld": "8de1335a5dbda0d8f8f26db7b885a1cfaa6878a295bc9dccb232d56792e8850a"
+      },
+      "rationale": {
+        "$withheld": "0e6f3315dcda72525215a3adef6ae7fb9a6ccc64d343b5f1e6fe6f474ff2b238"
+      },
+      "officer_id": {
+        "$withheld": "9f6427afbb9f03047f009c2ae6e096ba83e69530dfcf4f34c863e0aa2301397b"
+      },
+      "second_reviewer": {
+        "$withheld": "88605983530e12550041b218c9896439f55072007cb8ed714d62d6215b950743"
+      },
+      "decided_at": "2026-09-15T10:44:02Z",
+      "signer_address": "0xb2cbfa3e018233081358c88c2b4efa8857a7e60a",
+      "signature": "0x6ef4c6ff2cde6615930662fb36d64b1e6adc681e6851e92285eeb3a4f4a236b403f3ca37787c5d093e6b06d316a5a23bef6695cf0116e0e89756c0ff5fdc0809f8",
+      "execution_tx": "0xb2fcb00e8887187afecc33d5170142b9ad9ad33b848044c1dd39be2c5f41892b",
+      "return_blocked": {
+        "$withheld": "6a840b9e537c9f1a2022718429db5f63ca09172a1dc0c5f8b26116b7f9b75f5d"
+      }
+    },
+    "retention": {
+      "until": "2033-09-15",
+      "legal_hold": {
+        "$withheld": "40cd38419f8cb294265f122002fc6112df9144e59d1b8c1f8769821b3fa975de"
+      }
+    }
+  },
+  "salts": {
+    "pack_id": "95cc14754d0998cbb3647bf6822e989a",
+    "pack_version": "60f908624a79d88c3c00c1a5ea2400b0",
+    "schema_version": "4c5e1994bfaf289b0139200c847e13fa",
+    "created_at": "8c5f62106d276725957c9d9e320ff515",
+    "payment_ref": "f7164b576e6f006ac1850f770b752020",
+    "merchant_id": "5fa55c29e89ef45876a954cdf1dd02f1",
+    "processor.legal_name": "e473d1cd1cfc75c4acf83016f00931cd",
+    "processor.lei": "94b21c9c8d930b6efb64422781f70750",
+    "processor.casp_id": "aea0547a0def5e8a4fd27779a02e57bc",
+    "processor.nca": "c84d0f637650517c58813aa5ebc1b4f9",
+    "processor.rfi_channel": "1c48919f90482eab930ef5e4f191b8ec",
+    "processor.cert_url": "2d8f98f0769f801807c93173dfc0ae46",
+    "onchain.chain_name": "ee4c243d18fbc92be4312056049e8b9c",
+    "onchain.chain_id": "9eaa709d5b5e97c96f42c9e27322ae75",
+    "onchain.token": "c26a3995479b948b3b57b9f3497457ab",
+    "onchain.token_contract": "30d46a33f10905e46364969be3622aa1",
+    "onchain.amount": "bc98e8fbf1a0ec4a4b9f915fc9eef570",
+    "onchain.fx_rate_eur": "b907b8fb28377b52761621ffefbeb247",
+    "onchain.amount_eur": "a21e8071d93cddb513ee2402eaae4124",
+    "onchain.fx_source": "3ace4975b8eed53eb52498df1f06529b",
+    "onchain.fx_at": "93853c8d356b4c3a80e212cad168aaa0",
+    "onchain.payer_address": "cb6f053ee3264649181721d70d2dc2d1",
+    "onchain.deposit_contract": "9e867bbfc5de50f5fa5cf93e8c298916",
+    "onchain.tx_hash": "00820d4ca11a06489ecfc581075dd9cb",
+    "onchain.block_number": "1c227364515be0e04df594ed33f044df",
+    "onchain.block_timestamp": "4079b5981d192954c2bd119fdd5eec38",
+    "onchain.log_index": "f9457ed8faf1a4c0cfd23876d2513b60",
+    "onchain.confirmations": "42190c912f6adcb92530b0bd35db94b6",
+    "travel_rule.standard": "9154eb7cf3a15e22dbbb8694d2372cfe",
+    "travel_rule.collected_at": "e88a70f2960f9691e51373864c395723",
+    "travel_rule.collected_before_payment": "1a7153a81d408c262ef549fb48807d69",
+    "travel_rule.originator.type": "3de535349457ce5014279214ec7e9863",
+    "travel_rule.originator.name": "83842d99888f91327ead7c7d5e14b256",
+    "travel_rule.originator.country": "815b3af3da7727d8653758a751996bc7",
+    "travel_rule.originator.account": "29de06514c484f7784edb4a4dea93ada",
+    "travel_rule.originator_vasp": "bbff118579c33bca8d8717de4ef45e86",
+    "travel_rule.protocol": "468666714bde0e79a72523db9a4cf61c",
+    "travel_rule.wallet_type": "08e0ed0940fbcd80c61b07d1b469b781",
+    "travel_rule.wallet_type_method": "5ca0819abc58143039956a1fe070d69e",
+    "travel_rule.completeness": "580b83528a0677e999aa5b0f58529fb5",
+    "wallet_ownership.required": "f84c4df3e365ac642832753a7ea47a0d",
+    "wallet_ownership.reason": "5e618a6b7b589cbe3519f95c0ebb3280",
+    "wallet_ownership.method": "28f3738a22bf98892572b407f239666b",
+    "wallet_ownership.message": "18058ae84078dd51ae5d7977cb76858d",
+    "wallet_ownership.message_sha256": "7d93769b1f9c300d32121a7003677a75",
+    "wallet_ownership.domain": "e61438f55cf89b95733765aa70efb1f7",
+    "wallet_ownership.nonce": "0ce43a9e70fb6babd8c79c3c8bd2e6e3",
+    "wallet_ownership.chain_id": "886452958b66f90dc876b1799f7a5b2e",
+    "wallet_ownership.issued_at": "2fb29d1088b0add58d87598c558ad0ad",
+    "wallet_ownership.expires_at": "0d32b0a237a8ca1f70519b3226a41f7e",
+    "wallet_ownership.signature": "8b3847f7ef2840a0ed6d5eb8e404f948",
+    "wallet_ownership.result": "a7324417d6c249f4f5aa3af823952580",
+    "wallet_ownership.verified_at": "251c394c9aa71e003976049bc384fe15",
+    "wallet_ownership.verified_block": "c6fe318ece986445a37a0db524e28585",
+    "wallet_ownership.prior_pack_id": "ddcc6b34549cf1d9c1ccaf35ac20a4bd",
+    "kyt.provider": "e7006a0f6c6a614cc5159dad95caeb70",
+    "kyt.product": "9e763112e19975eeb4d068d8045737ea",
+    "kyt.screened_at": "11404f86258b9ac335e9bd0298b8eaaa",
+    "kyt.risk_level": "6c60a8b3c3cdbc87dec0cf65a26c9130",
+    "kyt.alerts": "d3b374555d89764c689b005cb275f660",
+    "kyt.exposures.0.category": "1c32496be777be8587e997b9f276d312",
+    "kyt.exposures.0.exposure": "5fd36eee6656dcfd8d1b4ae9f318c675",
+    "kyt.exposures.0.direction": "70c510c55127f01b30c84538af6fb747",
+    "kyt.exposures.0.share_pct": "2eda7d8d2a3368fba162dfcff4115406",
+    "kyt.exposures.0.value_usd": "57ec58da644c3a2586d2648117f4a105",
+    "kyt.exposures.1.category": "cb4ff55360851c597d0b2ae877e1aba3",
+    "kyt.exposures.1.exposure": "f541ce24a1ccc949e09d6be38934b4c6",
+    "kyt.exposures.1.direction": "b391c36c80a54fb2b77eca9d6e5519e6",
+    "kyt.exposures.1.share_pct": "d4d54718a5d1603485adc2578dd53ae8",
+    "kyt.exposures.1.value_usd": "24720bce08504f4c63ee81fd4489c6c0",
+    "sanctions.fields_screened": "22629650bb110121dc218f7e6cd9a423",
+    "sanctions.lists.0.name": "a7b347aff1f52563ed9a7c304ff25d34",
+    "sanctions.lists.0.version": "9eafe95ab40a65f78d1ab11405525bf8",
+    "sanctions.lists.0.loaded_at": "1bc57386bd4fd9112e71bc925468699c",
+    "sanctions.lists.1.name": "c42151fb29e9e22913311746b773ae6d",
+    "sanctions.lists.1.version": "7400e4ff8712db167ad47aa338df6e1c",
+    "sanctions.lists.1.loaded_at": "bd23eabe68702cdb95728a9642fe1525",
+    "sanctions.lists.2.name": "346956c8b02783ef84ab8f2aeb6fce0c",
+    "sanctions.lists.2.version": "9a5249033e6a5d088fe92bca05071cf0",
+    "sanctions.lists.2.loaded_at": "fe79d6bfa383639bd989ff1dec31c9da",
+    "sanctions.lists.3.name": "7a9e04f1227f7c99338275c2162e0515",
+    "sanctions.lists.3.version": "ba0bab7cb1517592b7482cd9e860fea7",
+    "sanctions.lists.3.loaded_at": "128903302dbff609647a8a056f81bb68",
+    "sanctions.screened_at": "36f5898dddae387e9964a89b47625266",
+    "sanctions.result": "6f9cda3e62bb89b66354d3f79fd594a0",
+    "structuring.result": "6339539be61efda59590a921c679fa60",
+    "structuring.evaluated_at": "e49e41b2e698aaaf579b9c16a72b3d14",
+    "issuer.checked": "58f3998290cf47bcf9d1bee0ea51e68b",
+    "issuer.block": "8024eeda0e083f04bb2a703175a33fed",
+    "issuer.result": "d37e36592a6fa5a9d7df7221f8c7b07b",
+    "issuer.checked_at": "d463d9a8326337d905117874224dea26",
+    "rules.rules_version": "0ff0b5375b4f787ca7ac7e43022eb4aa",
+    "rules.ruleset_hash": "3f4feae34076ddb671c16d0d2cece36d",
+    "rules.effective_from": "f747863b5743cab9f75633c8c80edd30",
+    "timeline.onchain.0.at": "5ab3d800d982bb5a8a5a42e5de626668",
+    "timeline.onchain.0.event": "b81b4cbee59d187607f57315530c527c",
+    "timeline.onchain.0.onchain_status": "4bd1ef13f865831b1d9add3dbdc67f32",
+    "timeline.onchain.0.ref": "7f12657f1f00e1541b210200f504a2e8",
+    "timeline.onchain.0.source": "9f1b189d393ad67e20ac1453c836f652",
+    "timeline.onchain.1.at": "0583884c97c3337be17a889b5c3f4fd7",
+    "timeline.onchain.1.event": "c71808998bda2a174863255a2cf3fadd",
+    "timeline.onchain.1.onchain_status": "25ceb7a0d94e2af060f0803e7defc83b",
+    "timeline.onchain.1.ref": "98132ff9807837710a66539d30267fe7",
+    "timeline.onchain.1.source": "b2e6dbab32b44148737402c753b45c77",
+    "decision.decision": "c84f577ef9feb3fdd0f49efbe08f74de",
+    "decision.decided_at": "a5a80cb43abfaa30ad4dbdb023f3588d",
+    "decision.signer_address": "ea4ee48dbd94b707241fd48148b39eba",
+    "decision.signature": "1f91c534a80810269a7c8ba06c1d32f6",
+    "decision.execution_tx": "1b6240c3d6c3789bfff5d1b9a0e9bdee",
+    "retention.until": "12805c7119f9ebc41798c8bdddc184f4"
+  },
+  "integrity": {
+    "sig_alg": "ES256, detached JWS",
+    "key_id": "examplepay-evidence-2026-01",
+    "cert_fingerprint": "830100b698fa948d86002642a4c1869c4772a3246069d27db77b6f4754befe00",
+    "signature": "eyJhbGciOiJFUzI1NiJ9..d34698aa5608f143f55e7ddfd41b73e9a71d735a56274c6ecb787bfe6a162771904f92daacd39ab1efefcdfe30cfc2fb",
+    "tsa": "Example Qualified TSA (fictional)",
+    "ts_time": "2026-09-16T09:12:40Z",
+    "ts_serial": "aac07a6d33b4dda4",
+    "anchor_root": "3409f3c13e32cd9c924f16ec79e3e4b0d1abfd242a342a61282a0d473ba3f3a6",
+    "anchor_tx": "0xc50a0cdcc645cc14a148efe5588c350727fd294a09b9eb70849ad5a5a4fbf28f",
+    "prev_pack_hash": "6a43c972835240d5ced8e074018a0c81a6eb0e00117357b6c3a613b489be5ea0",
+    "master_root": "426a9574a8386346e749a8637207cf6d95766dfed05676a5afcaca7ec121b836",
+    "evidence_root": "1359c7d1c67c2ba8159101e26e55389451b5b41c67f4ea6d84242e3c982f0ad1",
+    "projection_hash": "8f4c3ab837d01734c38073a5815b70a51b1f68e56a4069c09c7de111fcdf2bea",
+    "canonicalisation": "sorted keys, no whitespace, UTF-8 (RFC 8785-equivalent here)",
+    "note": "signature, cert_fingerprint, ts_*, anchor_* and prev_pack_hash are specimen placeholders"
+  }
+}

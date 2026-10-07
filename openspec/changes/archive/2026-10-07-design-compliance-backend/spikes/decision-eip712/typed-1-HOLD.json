@@ -1,0 +1,58 @@
+{
+  "domain": {
+    "chainId": 84532,
+    "name": "Deflow Decision",
+    "verifyingContract": "0x5Abe6E7c1fE5d3F72a93c0f1Bf05cdA05F4161f6",
+    "version": "1"
+  },
+  "message": {
+    "deadline": "1789999999",
+    "decision": "2",
+    "nonce": "1",
+    "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+    "paymentId": "0x7e9020816d3913b913f95bb13e7eb4387236ad9d16d89c39ab3e68b0d26e926b"
+  },
+  "primaryType": "Decision",
+  "types": {
+    "Decision": [
+      {
+        "name": "paymentId",
+        "type": "bytes32"
+      },
+      {
+        "name": "decision",
+        "type": "uint8"
+      },
+      {
+        "name": "packHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "nonce",
+        "type": "uint64"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64"
+      }
+    ],
+    "EIP712Domain": [
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address"
+      }
+    ]
+  }
+}

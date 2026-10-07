@@ -1,0 +1,113 @@
+{
+  "cases": [
+    {
+      "name": "CREDIT",
+      "message": {
+        "deadline": "1789999999",
+        "decision": "1",
+        "nonce": "1",
+        "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+        "paymentId": "0x7e9020816d3913b913f95bb13e7eb4387236ad9d16d89c39ab3e68b0d26e926b"
+      },
+      "structHash": "0x129672e7cfd5bc37cdc2238d901ac0c335b3ad581bdd63e96cd6c5322e46cb4a",
+      "digest": "0x15ba249689681afeb67f95cc62e457d43228117f8850db17d20ace98088e8276",
+      "signature": "0x3bd6087bb8ca9c8b4e52a79fba9fa9e5e0a2b8b8fb44ffb2dfd953ed1c9978d7426a23b08319680095f545ca1ae5546c1fdc950205fff062a9b9b53ebea375971b"
+    },
+    {
+      "name": "HOLD",
+      "message": {
+        "deadline": "1789999999",
+        "decision": "2",
+        "nonce": "1",
+        "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+        "paymentId": "0x7e9020816d3913b913f95bb13e7eb4387236ad9d16d89c39ab3e68b0d26e926b"
+      },
+      "structHash": "0x69ca1889c8514c1e972c8623fb71a2d5acaf1275e9ac22780cc44545e3119fd4",
+      "digest": "0xddd6037612f82243cf06569c75c191216ce8e2bd610692f7015ce1dafa23860c",
+      "signature": "0x5d0881d2f188e9b4a16f6236abca0b269a95db39f966e4b4005e4be9aaa775425df5e4bcd90682d7db357c01c5f933f168f20188b55d45eb27d58a6a6d37d40b1c"
+    },
+    {
+      "name": "FREEZE",
+      "message": {
+        "deadline": "1789999999",
+        "decision": "3",
+        "nonce": "2",
+        "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+        "paymentId": "0x7e9020816d3913b913f95bb13e7eb4387236ad9d16d89c39ab3e68b0d26e926b"
+      },
+      "structHash": "0xa93b3ad8b4917f53743df11e264c8d54eb738d7230e97c683831cceab17b952c",
+      "digest": "0x6c07d6665fff93ceec7aba6197c74f94a3272c7d8f1e022cd228699bd5ecb300",
+      "signature": "0x90123f9dcca7bcf157f44c014d3a85fcb285d06f3e7826195462d18d3d19f13260d385af38d974f6f8f7cd79fb6a331be8d7da821ef9d153ca4df0458b2354591b"
+    },
+    {
+      "name": "RETURN",
+      "message": {
+        "deadline": "1789999999",
+        "decision": "4",
+        "nonce": "1",
+        "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+        "paymentId": "0x7e9020816d3913b913f95bb13e7eb4387236ad9d16d89c39ab3e68b0d26e926b"
+      },
+      "structHash": "0xcb69537dec3b92596f9f0fa52231dcd1b201d4ea73c522081dfc1cb3825cc288",
+      "digest": "0xe7ad8b8ab4b4916400295a49d74ec6581efb48bdc314e0b8bf6255ca1a5411ad",
+      "signature": "0x578ebe2b6583afc98e9edc8df0666a3754cea5c68e562d6413bd6ed1a12d9c4840f07615ba4a670d6ad2e8e730181fa969838d902d1ae94e506d6f1aadb4e08b1b"
+    }
+  ],
+  "description": "Deflow Decision EIP-712 test vector (design-compliance-backend D7). Test key only.",
+  "domain": {
+    "name": "Deflow Decision",
+    "version": "1",
+    "chainId": "0x14a34",
+    "verifyingContract": "0x5Abe6E7c1fE5d3F72a93c0f1Bf05cdA05F4161f6",
+    "salt": ""
+  },
+  "paymentIdInputs": {
+    "chainId": 84532,
+    "logIndex": 212,
+    "txHash": "0xb41875ee16d70f08ac302433f1735f2f303f103cab3847e3606c78e3ee191000"
+  },
+  "paymentIdRule": "keccak256(abi.encode(uint256 chainId, bytes32 txHash, uint256 logIndex))",
+  "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "types": {
+    "Decision": [
+      {
+        "name": "paymentId",
+        "type": "bytes32"
+      },
+      {
+        "name": "decision",
+        "type": "uint8"
+      },
+      {
+        "name": "packHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "nonce",
+        "type": "uint64"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64"
+      }
+    ],
+    "EIP712Domain": [
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address"
+      }
+    ]
+  }
+}

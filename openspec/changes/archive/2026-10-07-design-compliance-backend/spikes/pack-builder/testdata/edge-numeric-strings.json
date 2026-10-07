@@ -1,0 +1,45 @@
+{
+ "schema_version": "deflow-evidence/1.0",
+ "pack_id": "edge-numeric-strings",
+ "profile": "MASTER",
+ "data": {
+  "pack_id": "edge-numeric-strings",
+  "payment_ref": "INV-EDGE",
+  "onchain": {
+   "chain_id": 84532,
+   "block_number": 25874309,
+   "amount": "0.10",
+   "amount_eur": "4800.00",
+   "fx_rate_eur": "1.0000",
+   "exp": "1e3",
+   "neg_zero": "-0",
+   "big": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+  },
+  "travel_rule": {},
+  "wallet_ownership": {},
+  "kyt": {},
+  "sanctions": {},
+  "structuring": {},
+  "issuer": {},
+  "rules": {}
+ },
+ "salts": {
+  "pack_id": "669dd42139fc343664bc0d04162a13d2136b6ca348826814c792acc9c9ed3f18",
+  "payment_ref": "29eabcfd5b0eded89ea0fcd764a9a5974ad6c7bce8d36caac8088aef62a75cc9",
+  "onchain.chain_id": "d485d84d0dc269e09861bcc7a70dd7a8f72245f3a9c8fb5f8ce773aa057807e8",
+  "onchain.block_number": "505efe74330245ca57e899c1546bf0f82a04f1fb5e75c3400b1d99420b5b4ba1",
+  "onchain.amount": "07a3f3f76dbbecfbae5b5150f46cf28dbb5fa3e700095730b8274417fa2a54d6",
+  "onchain.amount_eur": "5fdb6a4158f0db0617655bdfce8f8b69f3820fa69fbf4faa417d8c40c3b2e4b2",
+  "onchain.fx_rate_eur": "ec06a52920abd6dfe5fdbc85b8c1175815a9a9291e247619636ff540eef457a7",
+  "onchain.exp": "849382fe49fd4788f1b9851917a0e79ef6aa9d474ef0b264de9ea896c3b0dea2",
+  "onchain.neg_zero": "ebf57f79a369138153f4ce47469488968530a13689df4a18ea8c33c55a9138b0",
+  "onchain.big": "a26b1a36eef31a9cb70aec4b34211f4f7b6cd63934a68bc23da0306606138fc0",
+  "travel_rule": "eae899ee9f5782a8c9e6e6ea01bd2caa48031c9f0f3d185e7ae4b708a3165767",
+  "wallet_ownership": "4278f704c977786b28f4a4cdf11fe3c361211868547add1742d5d94b07428273",
+  "kyt": "b3203e11b244587da1ea80771bcc480e18b75a01ae3fc58dab538e8d274e9e8e",
+  "sanctions": "d5301e3e6da13e5379e09022f7ff4b5707dd52b6f3e1c02ed9b2aefc4925ac86",
+  "structuring": "f3bec0837e777c613a5edda1147c7b382e3e396ef789318d59c989337575cab3",
+  "issuer": "535c6f8eb511f5d966a1b0725df92ebf27514faba945cbbd698e23ac72c41757",
+  "rules": "6c621d1a05138a7888d37d9269a9da8e2e11e4aced2f6cfd24b05ab1b9e61bb0"
+ }
+}

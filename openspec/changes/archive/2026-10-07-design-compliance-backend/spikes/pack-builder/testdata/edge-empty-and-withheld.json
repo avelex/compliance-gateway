@@ -1,0 +1,52 @@
+{
+ "schema_version": "deflow-evidence/1.0",
+ "pack_id": "edge-empty-and-withheld",
+ "profile": "MASTER",
+ "data": {
+  "pack_id": "edge-empty-and-withheld",
+  "payment_ref": "INV-EDGE",
+  "onchain": {
+   "chain_id": 84532,
+   "amount": "1.00"
+  },
+  "travel_rule": {
+   "originator": {
+    "identifier": {
+     "$withheld": "abababababababababababababababababababababababababababababababab"
+    }
+   }
+  },
+  "wallet_ownership": {},
+  "kyt": {
+   "alerts": [],
+   "exposures": [],
+   "meta": {}
+  },
+  "sanctions": {},
+  "structuring": {
+   "linked_pack_ids": [],
+   "features": [
+    [],
+    {}
+   ]
+  },
+  "issuer": {},
+  "rules": {}
+ },
+ "salts": {
+  "pack_id": "669dd42139fc343664bc0d04162a13d2136b6ca348826814c792acc9c9ed3f18",
+  "payment_ref": "29eabcfd5b0eded89ea0fcd764a9a5974ad6c7bce8d36caac8088aef62a75cc9",
+  "onchain.chain_id": "d485d84d0dc269e09861bcc7a70dd7a8f72245f3a9c8fb5f8ce773aa057807e8",
+  "onchain.amount": "07a3f3f76dbbecfbae5b5150f46cf28dbb5fa3e700095730b8274417fa2a54d6",
+  "wallet_ownership": "4278f704c977786b28f4a4cdf11fe3c361211868547add1742d5d94b07428273",
+  "kyt.alerts": "c751c1a6f754f25827fabab7a3257ef6b7caad6d40509a889b6ee5eed9d34a7f",
+  "kyt.exposures": "cb90616d5884b7f03d4d539f745500fd4392cb3f9cf6fff927061ee86e71da3e",
+  "kyt.meta": "03e90830997ed66d74ddd38165ba6f6aac6f15c4abc91195c6e1393b7d17011d",
+  "sanctions": "d5301e3e6da13e5379e09022f7ff4b5707dd52b6f3e1c02ed9b2aefc4925ac86",
+  "structuring.linked_pack_ids": "b7f43e62ccd708a6673dd72fd8c6009b82bd1eee70d344f47e551fb10b5d4188",
+  "structuring.features.0": "76e79c816cffb4971227a8cb1570dad2c3a201941e09fc7d9c4875d2f3b4f23a",
+  "structuring.features.1": "07b203fdc10be0027ad72def2e49934092589f4a23f8cc59e21537d845ed91ad",
+  "issuer": "535c6f8eb511f5d966a1b0725df92ebf27514faba945cbbd698e23ac72c41757",
+  "rules": "6c621d1a05138a7888d37d9269a9da8e2e11e4aced2f6cfd24b05ab1b9e61bb0"
+ }
+}

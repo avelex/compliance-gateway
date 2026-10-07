@@ -124,11 +124,23 @@ Deflow is becoming composable. Merchants and processors pick a configuration:
 Changes, in order:
 
 - [x] `add-landing-page`: a single-screen landing page in the dashboard design system. A "Beta" button leads into the existing login and dashboard flow. The page describes configurations (a) and (b) and links an external waitlist form.
-- [ ] `design-compliance-backend`: design-only. Architecture of `compliance-backend`, the recommendations and Payment Passport service. Covers the domain model, storage, ingestion via eventscale, the format of the processor-signed decision, and modes (a) and (b).
+- [x] `design-compliance-backend`: design-only. Architecture of `compliance-backend`, the recommendations and Payment Passport service. Covers the domain model, storage, ingestion via eventscale, the format of the processor-signed decision, and modes (a) and (b).
 - [ ] `research-circle-wallets`: design-only spike. Compare Circle Wallets (developer-controlled, user-controlled, modular) with Privy key quorums, and decide between replacing Privy, offering both, or rejecting Circle.
-- [ ] `processor-decision-contracts`: gateway contracts for (a). Adds the processor-signed decision verified on-chain, a delivery executor chosen per gateway, a `Frozen` state, officer-controlled refund (none on sanctions), and a new factory. Depends on `design-compliance-backend`.
-- [ ] `add-compliance-backend`: implementation of recommendations and the Payment Passport. Depends on `design-compliance-backend`.
-- [ ] `add-deflow-workflow`: a self-hosted analog of the DON, built on [eventscale](https://github.com/eventscale/eventscale), reusing `attestor-workflow/internal/*`. Each gateway chooses `chainlink-cre` or `deflow` as its executor. Depends on `processor-decision-contracts` and `add-compliance-backend`.
+- [ ] `processor-decision-contracts`: contracts for (a), built to the interface in design D7:
+  - per-payer deposit contracts owned by the processor;
+  - the EIP-712 `Decision{paymentId, decision, packHash, nonce, deadline}`, verified against a processor-managed signer set;
+  - authorised executors (CRE forwarder or a `deflow-workflow` submitter);
+  - neutral statuses `PENDING`, `HELD`, `CREDITED`, `RETURNED`, where FREEZE is `HELD` plus a lock commitment and can never become a return;
+  - no public `reclaim` on `HELD`;
+  - a new factory.
+
+  Depends on `design-compliance-backend`.
+- [ ] `add-compliance-backend`: a single-tenant Go service per processor that produces recommendations and the Payment Passport. It ships mode (b) first, which needs no contracts and covers the pilot's retro and shadow stages, then mode (a). Ingestion is eventscale plus its own `eth_getLogs` reconciler. Depends on `design-compliance-backend`.
+- [ ] `add-deflow-workflow`: a self-hosted analog of the DON. It takes processor-signed decisions from `compliance-backend` (NATS `decisions.<chainId>`) and submits them on-chain right away. It cannot forge a decision. Each gateway chooses `chainlink-cre` or `deflow` as its executor. Depends on `processor-decision-contracts`, `add-compliance-backend` and the eventscale fixes.
+- [ ] eventscale fixes (in the eventscale repo), found in spike T2:
+  - a per-network `confirmations` depth;
+  - fix the cursor encoding, which today panics on restart;
+  - durable SDK consumers with a selectable deliver policy.
 - [ ] `wallet-provider-abstraction`: Privy and Circle side by side in the dashboard. Built only if `research-circle-wallets` recommends offering both.
 - [ ] Settlement Manifest and Audit Export: out of the first backend iteration, but the backend data model must support them.
 
