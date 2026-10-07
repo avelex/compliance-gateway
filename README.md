@@ -114,6 +114,26 @@ Deflow bridges the gap between regulatory requirements and Web3 privacy. We sepa
 
 ## Roadmap
 
+### Composable Deflow (planned OpenSpec changes)
+
+Deflow is becoming composable. Merchants and processors pick a configuration:
+
+- **(a) Contracts + recommendations + evidence pack.** This is the processor model from the one-pager. Funds wait in a contract owned by the processor. The processor signs the decision with its own key. A delivery executor (Chainlink CRE DON or `deflow-workflow`) only carries that signed decision on-chain, and the contract checks both the executor and the processor's signature.
+- **(b) Recommendations + evidence pack.** Shadow mode with no contracts. Deposits are observed on-chain and a Payment Passport is built for each one.
+
+Changes, in order:
+
+- [x] `add-landing-page`: a single-screen landing page in the dashboard design system. A "Beta" button leads into the existing login and dashboard flow. The page describes configurations (a) and (b) and links an external waitlist form.
+- [ ] `design-compliance-backend`: design-only. Architecture of `compliance-backend`, the recommendations and Payment Passport service. Covers the domain model, storage, ingestion via eventscale, the format of the processor-signed decision, and modes (a) and (b).
+- [ ] `research-circle-wallets`: design-only spike. Compare Circle Wallets (developer-controlled, user-controlled, modular) with Privy key quorums, and decide between replacing Privy, offering both, or rejecting Circle.
+- [ ] `processor-decision-contracts`: gateway contracts for (a). Adds the processor-signed decision verified on-chain, a delivery executor chosen per gateway, a `Frozen` state, officer-controlled refund (none on sanctions), and a new factory. Depends on `design-compliance-backend`.
+- [ ] `add-compliance-backend`: implementation of recommendations and the Payment Passport. Depends on `design-compliance-backend`.
+- [ ] `add-deflow-workflow`: a self-hosted analog of the DON, built on [eventscale](https://github.com/eventscale/eventscale), reusing `attestor-workflow/internal/*`. Each gateway chooses `chainlink-cre` or `deflow` as its executor. Depends on `processor-decision-contracts` and `add-compliance-backend`.
+- [ ] `wallet-provider-abstraction`: Privy and Circle side by side in the dashboard. Built only if `research-circle-wallets` recommends offering both.
+- [ ] Settlement Manifest and Audit Export: out of the first backend iteration, but the backend data model must support them.
+
+### Backlog
+
 - [ ] Wallet rebind by signature — bind a new address to an existing attestation without a repeat
   Sumsub session.
 - [ ] Sumsub Reusable KYC across businesses.
