@@ -49,12 +49,15 @@ export function StatusMark({ status }: { status: Status }) {
 export function Button({
   children,
   href,
+  external = false,
   variant = "primary",
   className = "",
   ...rest
 }: {
   children: React.ReactNode;
   href?: string;
+  /** Opens `href` in a new tab as a plain anchor — for links that leave the app. */
+  external?: boolean;
   variant?: "primary" | "quiet";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -67,6 +70,12 @@ export function Button({
       ? "bg-blue text-white hover:bg-blue-deep disabled:bg-rule disabled:text-slate"
       : "border border-rule text-ink hover:border-ink disabled:text-slate";
   const cn = `${base} ${look} ${className}`;
+  if (href && external)
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cn}>
+        {children}
+      </a>
+    );
   if (href)
     return (
       <Link href={href} className={cn}>
