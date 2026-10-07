@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/src/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {AttestationRegistry} from "../src/AttestationRegistry.sol";
 import {Attestation, Entry, EntryKind} from "../src/libs/Compliance.sol";
 
