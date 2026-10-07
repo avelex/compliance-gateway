@@ -100,6 +100,9 @@ Deflow bridges the gap between regulatory requirements and Web3 privacy. We sepa
 | `AttestationRegistry.sol` | us | Attestation registry, written only by the CRE workflow |
 | `GatewayFactory.sol` | us | Deploys merchant gateways |
 | `MerchantGateway.sol` | merchant | Policy, clearing window, `settle` by the CRE workflow, `reclaim` by payer|
+| `ProcessorHub.sol` | processor | Configuration (a): executes processor-signed EIP-712 decisions (CREDIT / HOLD / FREEZE / RETURN) delivered by the CRE forwarder or `deflow-workflow` |
+| `DepositAccount.sol` | processor | Per-payer CREATE2 deposit address; pays out only to the processor's pool or back to the payer |
+| `ProcessorHubFactory.sol` | us | Deploys processor hubs; fixed address for indexers and executors |
 | `relay` | us | Queue of verification requests and webhooks + Sumsub WebSDK token minting. A dumb pipe: no enclave key, no read scope on Sumsub, signs nothing on-chain |
 | `checkout` / `dashboard` | us | Payer flow, merchant onboarding, policy, attestation and payment lists |
 
@@ -126,15 +129,13 @@ Changes, in order:
 - [x] `add-landing-page`: a single-screen landing page in the dashboard design system. A "Beta" button leads into the existing login and dashboard flow. The page describes configurations (a) and (b) and links an external waitlist form.
 - [x] `design-compliance-backend`: design-only. Architecture of `compliance-backend`, the recommendations and Payment Passport service. Covers the domain model, storage, ingestion via eventscale, the format of the processor-signed decision, and modes (a) and (b).
 - [ ] `research-circle-wallets`: design-only spike. Compare Circle Wallets (developer-controlled, user-controlled, modular) with Privy key quorums, and decide between replacing Privy, offering both, or rejecting Circle.
-- [ ] `processor-decision-contracts`: contracts for (a), built to the interface in design D7:
-  - per-payer deposit contracts owned by the processor;
-  - the EIP-712 `Decision{paymentId, decision, packHash, nonce, deadline}`, verified against a processor-managed signer set;
-  - authorised executors (CRE forwarder or a `deflow-workflow` submitter);
-  - neutral statuses `PENDING`, `HELD`, `CREDITED`, `RETURNED`, where FREEZE is `HELD` plus a lock commitment and can never become a return;
-  - no public `reclaim` on `HELD`;
-  - a new factory.
-
-  Depends on `design-compliance-backend`.
+- [x] `processor-decision-contracts`: contracts for (a), in `contracts/src/processor/`:
+  - `ProcessorHub`, one per processor. It holds a signer set with per-decision masks, the authorised executors (CRE forwarder and/or `deflow-workflow` submitters), the pool and the payment state.
+  - `DepositAccount`, one per payer, at a CREATE2 address that works before deployment. Payers fund it with a plain ERC-20 transfer, and it can only pay out to the pool or back to its payer.
+  - The EIP-712 `Decision{paymentId, decision, token, amount, packHash, nonce, deadline}`. `token` and `amount` were added to the D7 struct, because a plain transfer leaves no on-chain record of the amount. The `cast` vector is in `contracts/test/processor/fixtures/`.
+  - Neutral statuses `PENDING`, `HELD`, `CREDITED`, `RETURNED`. FREEZE is `HELD` plus a lock commitment and can never become a return.
+  - No public `reclaim` and no payer timeout in version 1.
+  - `ProcessorHubFactory`.
 - [ ] `add-compliance-backend`: a single-tenant Go service per processor that produces recommendations and the Payment Passport. It ships mode (b) first, which needs no contracts and covers the pilot's retro and shadow stages, then mode (a). Ingestion is eventscale plus its own `eth_getLogs` reconciler. Depends on `design-compliance-backend`.
 - [ ] `add-deflow-workflow`: a self-hosted analog of the DON. It takes processor-signed decisions from `compliance-backend` (NATS `decisions.<chainId>`) and submits them on-chain right away. It cannot forge a decision. Each gateway chooses `chainlink-cre` or `deflow` as its executor. Depends on `processor-decision-contracts`, `add-compliance-backend` and the eventscale fixes.
 - [ ] eventscale fixes (in the eventscale repo), found in spike T2:

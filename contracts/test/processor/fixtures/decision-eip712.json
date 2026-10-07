@@ -1,0 +1,294 @@
+{
+  "description": "Deflow Decision EIP-712 vectors (processor-decision-contracts D4). Test key only.",
+  "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "cases": [
+    {
+      "name": "CREDIT",
+      "typedData": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Decision": [
+            {
+              "name": "paymentId",
+              "type": "bytes32"
+            },
+            {
+              "name": "decision",
+              "type": "uint8"
+            },
+            {
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "name": "packHash",
+              "type": "bytes32"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            },
+            {
+              "name": "deadline",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "Decision",
+        "domain": {
+          "name": "Deflow Decision",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5Abe6E7c1fE5d3F72a93c0f1Bf05cdA05F4161f6"
+        },
+        "message": {
+          "paymentId": "0x272e0803a390f0f5181926192d4ac099ce5d65e4b414cbb08c48af2a3bd12b0f",
+          "decision": "1",
+          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "amount": "100000000",
+          "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+          "nonce": "1",
+          "deadline": "1789999999"
+        }
+      },
+      "signature": "0x756d60b68d1425ce63764dbd3b1224d3ccc1a2d403033e66d92bd0a507da211737aac6edba2cf7670655b880ef9765e8ad0ccdeabbaa9a43f0f8c29699b2e4ce1c"
+    },
+    {
+      "name": "HOLD",
+      "typedData": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Decision": [
+            {
+              "name": "paymentId",
+              "type": "bytes32"
+            },
+            {
+              "name": "decision",
+              "type": "uint8"
+            },
+            {
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "name": "packHash",
+              "type": "bytes32"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            },
+            {
+              "name": "deadline",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "Decision",
+        "domain": {
+          "name": "Deflow Decision",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5Abe6E7c1fE5d3F72a93c0f1Bf05cdA05F4161f6"
+        },
+        "message": {
+          "paymentId": "0x272e0803a390f0f5181926192d4ac099ce5d65e4b414cbb08c48af2a3bd12b0f",
+          "decision": "2",
+          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "amount": "100000000",
+          "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+          "nonce": "1",
+          "deadline": "1789999999"
+        }
+      },
+      "signature": "0x14d71ee8f86639e8bc59d68276247642cd03ef660fdb9f7dca0d1208543d234b2fe41ddde5c4236d15dd8685cc5005f0533edc8ed14b439d716cd010af96a50f1c"
+    },
+    {
+      "name": "FREEZE",
+      "typedData": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Decision": [
+            {
+              "name": "paymentId",
+              "type": "bytes32"
+            },
+            {
+              "name": "decision",
+              "type": "uint8"
+            },
+            {
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "name": "packHash",
+              "type": "bytes32"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            },
+            {
+              "name": "deadline",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "Decision",
+        "domain": {
+          "name": "Deflow Decision",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5Abe6E7c1fE5d3F72a93c0f1Bf05cdA05F4161f6"
+        },
+        "message": {
+          "paymentId": "0x272e0803a390f0f5181926192d4ac099ce5d65e4b414cbb08c48af2a3bd12b0f",
+          "decision": "3",
+          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "amount": "100000000",
+          "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+          "nonce": "2",
+          "deadline": "1789999999"
+        }
+      },
+      "signature": "0x3a13cdc0ef83341abeca0bcb861aff86742b02e1458a9a33b0d6318e312a68084c295ff4fd8dfe7b1e1906c473f42756b39963c7a18ae0e2ca55d070bd7dc0c41b"
+    },
+    {
+      "name": "RETURN",
+      "typedData": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "chainId",
+              "type": "uint256"
+            },
+            {
+              "name": "verifyingContract",
+              "type": "address"
+            }
+          ],
+          "Decision": [
+            {
+              "name": "paymentId",
+              "type": "bytes32"
+            },
+            {
+              "name": "decision",
+              "type": "uint8"
+            },
+            {
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "name": "packHash",
+              "type": "bytes32"
+            },
+            {
+              "name": "nonce",
+              "type": "uint64"
+            },
+            {
+              "name": "deadline",
+              "type": "uint64"
+            }
+          ]
+        },
+        "primaryType": "Decision",
+        "domain": {
+          "name": "Deflow Decision",
+          "version": "1",
+          "chainId": 31337,
+          "verifyingContract": "0x5Abe6E7c1fE5d3F72a93c0f1Bf05cdA05F4161f6"
+        },
+        "message": {
+          "paymentId": "0x272e0803a390f0f5181926192d4ac099ce5d65e4b414cbb08c48af2a3bd12b0f",
+          "decision": "4",
+          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "amount": "100000000",
+          "packHash": "0x441bcff8a5eec272813a04f65aa31cce8ec3e34b696ad30a6c4fd326aedd865a",
+          "nonce": "1",
+          "deadline": "1789999999"
+        }
+      },
+      "signature": "0xe964a7265555434d77b5cf198353d8e8e2c0e827fe47973250ff25b990ad0c3c19a3214d3a7f1766fa56f2a64f3787d6841fe51a2e4d9d02c0b626b6c7e6cf9b1c"
+    }
+  ]
+}
