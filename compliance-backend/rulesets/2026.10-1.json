@@ -1,0 +1,16 @@
+{
+  "version": "2026.10-1",
+  "rules": [
+    {"id": "UNAV-01", "when": [{"field": "any_unavailable", "op": "eq", "value": true}],
+     "recommend": "HOLD", "reasons": ["CHECK_UNAVAILABLE"], "auto": true},
+    {"id": "SANC-01", "when": [{"field": "sanctions.result", "op": "eq", "value": "TRUE_MATCH"}],
+     "recommend": "FREEZE", "reasons": ["SANCTIONS_TRUE_MATCH"], "auto": false},
+    {"id": "ISS-01", "when": [{"field": "issuer.result", "op": "eq", "value": "LISTED"}],
+     "recommend": "HOLD", "reasons": ["ISSUER_LISTED"], "auto": true},
+    {"id": "KYT-01", "when": [{"field": "kyt.risk_level", "op": "in", "value": ["HIGH", "SEVERE"]}],
+     "recommend": "HOLD", "reasons": ["KYT_HIGH_RISK"], "auto": true},
+    {"id": "SPLIT-03", "when": [{"field": "structuring.result", "op": "eq", "value": "FLAG"}],
+     "recommend": "HOLD", "reasons": ["STRUCTURING"], "auto": true},
+    {"id": "DEFAULT", "when": [], "recommend": "CREDIT", "reasons": ["CLEAN"], "auto": true}
+  ]
+}

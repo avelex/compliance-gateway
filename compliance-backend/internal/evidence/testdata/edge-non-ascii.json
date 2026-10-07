@@ -1,0 +1,41 @@
+{
+ "schema_version": "deflow-evidence/1.0",
+ "pack_id": "edge-non-ascii",
+ "profile": "MASTER",
+ "data": {
+  "pack_id": "edge-non-ascii",
+  "payment_ref": "INV-EDGE",
+  "onchain": {
+   "chain_id": 84532,
+   "amount": "1.00"
+  },
+  "travel_rule": {
+   "originator": {
+    "name": "Zoë Ångström-李雷 🙂",
+    "address": "Line Sep \"quoted\" back\\slash",
+    "note": "tab\there\u0001ctl"
+   }
+  },
+  "wallet_ownership": {},
+  "kyt": {},
+  "sanctions": {},
+  "structuring": {},
+  "issuer": {},
+  "rules": {}
+ },
+ "salts": {
+  "pack_id": "669dd42139fc343664bc0d04162a13d2136b6ca348826814c792acc9c9ed3f18",
+  "payment_ref": "29eabcfd5b0eded89ea0fcd764a9a5974ad6c7bce8d36caac8088aef62a75cc9",
+  "onchain.chain_id": "d485d84d0dc269e09861bcc7a70dd7a8f72245f3a9c8fb5f8ce773aa057807e8",
+  "onchain.amount": "07a3f3f76dbbecfbae5b5150f46cf28dbb5fa3e700095730b8274417fa2a54d6",
+  "travel_rule.originator.name": "559b8d456c399d07437e63c2f560695b8672f4dfa9cbac9971e16e6edb042472",
+  "travel_rule.originator.address": "1349d22c50aa16a8fdc53544884c5a75d7c6500384f5d356d7594873ade7c7c1",
+  "travel_rule.originator.note": "c86ffe730290548d963b9016462ec3de533e19c009270f421db5e18e7b6a35b8",
+  "wallet_ownership": "4278f704c977786b28f4a4cdf11fe3c361211868547add1742d5d94b07428273",
+  "kyt": "b3203e11b244587da1ea80771bcc480e18b75a01ae3fc58dab538e8d274e9e8e",
+  "sanctions": "d5301e3e6da13e5379e09022f7ff4b5707dd52b6f3e1c02ed9b2aefc4925ac86",
+  "structuring": "f3bec0837e777c613a5edda1147c7b382e3e396ef789318d59c989337575cab3",
+  "issuer": "535c6f8eb511f5d966a1b0725df92ebf27514faba945cbbd698e23ac72c41757",
+  "rules": "6c621d1a05138a7888d37d9269a9da8e2e11e4aced2f6cfd24b05ab1b9e61bb0"
+ }
+}

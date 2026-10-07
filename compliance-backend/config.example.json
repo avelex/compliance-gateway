@@ -1,0 +1,49 @@
+{
+  "database_url": "postgres://deflow:deflow@127.0.0.1:5432/deflow?sslmode=disable",
+  "listen": ":8080",
+  "api_token": "change-me",
+  "data_dir": "data",
+  "nats_url": "nats://127.0.0.1:4222",
+  "processor": {
+    "legal_name": "ExamplePay GmbH (fictional)",
+    "lei": "5299000EXAMPLE000001",
+    "casp_id": "DE-CASP-0001",
+    "nca": "BaFin",
+    "rfi_channel": "compliance@examplepay.invalid",
+    "cert_url": "https://examplepay.invalid/evidence-cert"
+  },
+  "chains": [
+    {
+      "chain_id": 31337,
+      "name": "anvil",
+      "rpc": "http://127.0.0.1:8545",
+      "confirmations": 3,
+      "reconcile_interval": "2s",
+      "eventscale_network": "anvil",
+      "tokens": [
+        {"symbol": "MUSD", "address": "0x000000000000000000000000000000000000b0b5", "decimals": 6,
+         "eventscale_alias": "MUSD", "eur_rate": "0.92", "fx_source": "static reference rate (config)"}
+      ],
+      "deposit_addresses": [
+        {"address": "0x000000000000000000000000000000000000dEaD", "merchant_id": "m_7f3a"}
+      ]
+    }
+  ],
+  "keys": {
+    "policy_key_file": "keys/policy.hex",
+    "evidence_key_file": "keys/evidence.pem",
+    "evidence_kid": "examplepay-evidence-2026-10"
+  },
+  "officers": [
+    {"address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", "officer_id": "officer-01", "mask": 15}
+  ],
+  "mlro": ["0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"],
+  "sanctions_lists": [
+    {"name": "OFAC SDN digital currency addresses (ETH)", "version": "2026-10-01", "path": "sanctions/ofac_eth.txt"}
+  ],
+  "kyt": {"goplus_base_url": "https://api.gopluslabs.io"},
+  "check_timeout": "10s",
+  "decision_ttl": "24h",
+  "worker_interval": "2s",
+  "retention_years": 7
+}

@@ -103,6 +103,7 @@ Deflow bridges the gap between regulatory requirements and Web3 privacy. We sepa
 | `ProcessorHub.sol` | processor | Configuration (a): executes processor-signed EIP-712 decisions (CREDIT / HOLD / FREEZE / RETURN) delivered by the CRE forwarder or `deflow-workflow` |
 | `DepositAccount.sol` | processor | Per-payer CREATE2 deposit address; pays out only to the processor's pool or back to the payer |
 | `ProcessorHubFactory.sol` | us | Deploys processor hubs; fixed address for indexers and executors |
+| `compliance-backend` | processor | Configuration (b): deposit ingestion, checks, ruleset recommendations, signed decisions, Payment Passport and projections ([README](./compliance-backend/README.md)) |
 | `relay` | us | Queue of verification requests and webhooks + Sumsub WebSDK token minting. A dumb pipe: no enclave key, no read scope on Sumsub, signs nothing on-chain |
 | `checkout` / `dashboard` | us | Payer flow, merchant onboarding, policy, attestation and payment lists |
 
@@ -136,7 +137,19 @@ Changes, in order:
   - Neutral statuses `PENDING`, `HELD`, `CREDITED`, `RETURNED`. FREEZE is `HELD` plus a lock commitment and can never become a return.
   - No public `reclaim` and no payer timeout in version 1.
   - `ProcessorHubFactory`.
-- [ ] `add-compliance-backend`: a single-tenant Go service per processor that produces recommendations and the Payment Passport. It ships mode (b) first, which needs no contracts and covers the pilot's retro and shadow stages, then mode (a). Ingestion is eventscale plus its own `eth_getLogs` reconciler. Depends on `design-compliance-backend`.
+- [x] `add-compliance-backend`: first slice of `compliance-backend/`, a single-tenant Go service for configuration (b):
+  - ingests deposits through eventscale (durable JetStream consumer) and an `eth_getLogs` reconciler, which is the source of truth;
+  - runs the checks: KYT through GoPlus (demo only), sanctions address lists, structuring (`SPLIT-03`) and the issuer blacklist;
+  - applies an MLRO-approved ruleset and records EIP-712 decisions, by the policy key or by an officer's own wallet;
+  - issues Payment Passport packs with roots, JWS and a journal, plus per-profile projections that `verify_pack.py` accepts (JSON input added).
+- [ ] compliance-backend follow-ups, each a separate change:
+  - PDF rendering, RFC 3161 timestamps and the Merkle anchor;
+  - checkout intake: Travel Rule data and wallet-ownership proof;
+  - name and counterparty screening, and production KYT adapters;
+  - configuration (a): ingestion of `DecisionExecuted` and decision delivery over NATS `decisions.<chainId>`;
+  - officer console UI;
+  - KMS-backed keys and OIDC;
+  - Annex 3 reporting records.
 - [ ] `add-deflow-workflow`: a self-hosted analog of the DON. It takes processor-signed decisions from `compliance-backend` (NATS `decisions.<chainId>`) and submits them on-chain right away. It cannot forge a decision. Each gateway chooses `chainlink-cre` or `deflow` as its executor. Depends on `processor-decision-contracts`, `add-compliance-backend` and the eventscale fixes.
 - [ ] eventscale fixes (in the eventscale repo), found in spike T2:
   - a per-network `confirmations` depth;

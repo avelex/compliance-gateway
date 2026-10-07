@@ -1,0 +1,19 @@
+# Watches the e2e stablecoin, which the tests place at a fixed address with anvil_setCode.
+version: 1
+nats:
+  path: /conf/nats.conf
+networks:
+  - name: anvil
+    rpc: http://anvil:8545
+    rate_limit:
+      per: 1s
+      limit: 50
+    blocks_proc:
+      batch_limit: 10
+      interval: 1s
+events:
+  - name: Transfer
+    signature: event Transfer(address indexed from, address indexed to, uint256 value)
+    networks:
+      anvil:
+        0x000000000000000000000000000000000000b0b5: MUSD

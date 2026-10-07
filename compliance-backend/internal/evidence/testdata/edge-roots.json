@@ -1,0 +1,17 @@
+{
+ "edge-empty-and-withheld.json": {
+  "master_root": "6bb101d2a2053a063e495df50b583610fede0fc4dac90da91d9871c25d394fe8",
+  "evidence_root": "6bb101d2a2053a063e495df50b583610fede0fc4dac90da91d9871c25d394fe8",
+  "projection_hash": "8ffbd50f97514b8532668ebba6969b62067185d508d27c6ed578aef02789d94f"
+ },
+ "edge-non-ascii.json": {
+  "master_root": "5e7522506c1bf2aa2499bb27a024868de62eaee7389fe612bf495837d6e0cd30",
+  "evidence_root": "5e7522506c1bf2aa2499bb27a024868de62eaee7389fe612bf495837d6e0cd30",
+  "projection_hash": "bbda8b8a2d3c0caddb79cc5dd2d686ffa2da522fb648b3096dfbb49be88c0296"
+ },
+ "edge-numeric-strings.json": {
+  "master_root": "efabe601b99b4ea34c27eea7d72a9fbc3b079ec365a9781dc06457bec27b096c",
+  "evidence_root": "efabe601b99b4ea34c27eea7d72a9fbc3b079ec365a9781dc06457bec27b096c",
+  "projection_hash": "01557b54be45b97b8e4f294b227378c6f5a577cab2576b802929c8d4a2e1e95d"
+ }
+}

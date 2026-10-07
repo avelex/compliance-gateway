@@ -1,0 +1,29 @@
+# Dev stack: Postgres, a local chain, and eventscale (with its embedded NATS) watching that chain.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: deflow
+      POSTGRES_PASSWORD: deflow
+      POSTGRES_DB: deflow
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deflow"]
+      interval: 2s
+      retries: 20
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    entrypoint: ["anvil", "--host", "0.0.0.0", "--block-time", "1"]
+    ports: ["8545:8545"]
+
+  eventscale:
+    build: dev/eventscale
+    command: ["-c", "/conf/config.yaml"]
+    volumes:
+      - ./dev/eventscale/config.yaml:/conf/config.yaml:ro
+      - ./dev/eventscale/nats.conf:/conf/nats.conf:ro
+    ports: ["4222:4222"]
+    depends_on: [anvil]
+    # eventscale 748a8ef panics when restarted with persisted state (spike T2), so the store is not a volume.
+    restart: on-failure
