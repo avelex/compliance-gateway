@@ -1,27 +1,11 @@
-# landing Specification
+# Spec Delta
 
-## Purpose
-The public entry page of Deflow. It explains what Deflow does and in which configurations, offers the waitlist, and leads beta users into the existing dashboard.
+## RENAMED Requirements
 
-## Requirements
+- FROM: `### Requirement: Core message from the one-pager`
+- TO: `### Requirement: Core message`
 
-### Requirement: Landing is served at the root
-The landing page SHALL be served at `/` and SHALL NOT redirect to the dashboard. The landing page SHALL render without authentication and SHALL NOT load Privy.
-
-#### Scenario: Anonymous visitor opens root
-- **WHEN** a visitor with no session opens `/`
-- **THEN** the landing page renders, no login prompt is shown, and no Privy script is loaded
-
-### Requirement: Beta entry in the top-right corner
-The landing page SHALL show a "Beta" control in the top-right corner of the header that navigates to the dashboard (`/gateways`). From there the existing login, setup, and dashboard flow applies unchanged.
-
-#### Scenario: Signed-out visitor clicks Beta
-- **WHEN** a visitor without a session clicks "Beta"
-- **THEN** they reach the dashboard's sign-in screen
-
-#### Scenario: Signed-in merchant clicks Beta
-- **WHEN** a merchant with a session and a completed setup clicks "Beta"
-- **THEN** they reach the gateways page
+## MODIFIED Requirements
 
 ### Requirement: Core message
 The landing page SHALL state the promise: a proof for every deposit and every withdrawal. It SHALL describe Deflow as an evidence layer for stablecoin deposits that gives regulated crypto businesses a signed proof of how each deposit was checked and decided. It SHALL name the audience: processors, exchanges, off-ramps and custodians.
@@ -60,16 +44,17 @@ The landing page SHALL present the two configurations as a single-choice control
 - **WHEN** the visitor reaches the configuration control with the keyboard
 - **THEN** each option is focusable, shows a visible focus ring, and exposes its checked state to assistive technology
 
-### Requirement: External waitlist link
-The landing page SHALL offer a waitlist call to action that opens the external form configured in `NEXT_PUBLIC_WAITLIST_URL` in a new tab. Deflow SHALL NOT collect or store waitlist data. When the URL is not configured, the waitlist call to action SHALL NOT be rendered.
+## REMOVED Requirements
 
-#### Scenario: Waitlist configured
-- **WHEN** `NEXT_PUBLIC_WAITLIST_URL` is set and the visitor clicks the waitlist call to action
-- **THEN** the external form opens in a new tab
+### Requirement: Single screen without scrolling
+**Reason**: The Deflow design adds Problem, Why, How and Not-claims sections below the fold. Its fold alone is taller than 720px.
+**Migration**: Replaced by "No horizontal page scroll". The page scrolls vertically at every viewport.
 
-#### Scenario: Waitlist not configured
-- **WHEN** `NEXT_PUBLIC_WAITLIST_URL` is empty or unset
-- **THEN** no waitlist call to action is rendered and the rest of the page is unaffected
+### Requirement: Dashboard design system only
+**Reason**: The landing page adopts the Deflow brand system from the design export. The dashboard keeps its own system until a separate change moves it.
+**Migration**: Replaced by "Deflow brand system scoped to the landing page".
+
+## ADDED Requirements
 
 ### Requirement: Two-paths flow diagram
 The landing page SHALL show the flow as two parallel paths. The money path runs from the payer's personal address through the merchant's contract to four outcomes: credit to your pool, hold, freeze, and return to payer. The evidence path runs through Travel Rule, checks, your rules, signed decision, and Payment Passport, to the off-ramp or bank and the regulator.
