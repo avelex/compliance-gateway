@@ -13,7 +13,7 @@ const TX = "0x9c0d5e2f8a1b3c4d6e7f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b77ab";
 
 const short = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
 
-function Hex({ value, label = short(value) }: { value: string; label?: string }) {
+export function Hex({ value, label = short(value) }: { value: string; label?: string }) {
   const [status, setStatus] = useState("");
   const report = (msg: string) => {
     setStatus(msg);
@@ -123,10 +123,8 @@ export function LandingPassport() {
             </div>
           </div>
         </div>
-        <div className={s.mrz} aria-hidden>PP&lt;DEFLOW&lt;20261008&lt;00412&lt;&lt;USDC&lt;12480&lt;00&lt;&lt;CREDIT&lt;&lt;&lt;</div>
         <div ref={shine} className={s.shine} aria-hidden />
       </div>
-      <p className={s.cap}>Sample passport. Names, addresses and hashes are illustrative.</p>
     </div>
   );
 }
