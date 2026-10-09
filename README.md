@@ -1,171 +1,65 @@
 # Deflow
 
-The non-custodial compliance gateway for crypto checkouts. 
+A proof for every deposit and every withdrawal.
 
-Enforce KYC/AML checks in real time, before funds ever hit your wallet.
+Deflow is an evidence layer for stablecoin deposits. It gives regulated crypto businesses (processors, exchanges, off-ramps and custodians) a signed proof of how each deposit was checked and decided.
 
-## Purpose
+Every stablecoin deposit you receive has to be explained sooner or later: to a counterparty, a bank or a regulator. Deflow runs the compliance сhecks you choose, applies rules approved by your MLRO, and records a decision signed by your compliance officer or made automatically under your rules.
 
-Let any merchant – regulated institution or SaaS, accept stablecoin payments safely and legally. You get clean money and zero data liability, while your customers retain absolute privacy.
+Each deposit gets a Payment Passport that anyone can verify, ready before the next party asks.
+
+Deflow holds no funds and signs no transactions. With contracts, deposits also wait on-chain until your decision arrives.
 
 ## Problem
 
-Accept crypto long enough and a sanctioned address **will** pay you. You find out from your bank, your CEX, your processor or your regulator — after the money is already sitting in your account. Damage is already done, but crypto payments are irreversible.
-
-Today, merchants are forced into three broken compromises:
-
-1. **Hand custody to a centralized PSP.** They take a cut, hold your funds, and keep your customers' passports in their database. Their breach is your headline.
-2. **Build a DIY stack.** Sumsub and Chainalysis score risk, but cannot move tokens. If funds hit your wallet before the API answers, your address is already burned. Connecting them to smart contracts forces you to build custom escrow and maintain a backend signer.
-3. **Screen nothing and hope.** Free address oracles only flag addresses that are themselves on the OFAC list. Funds that passed through Tornado Cash, a cross-chain bridge exploit, or a mixer two hops ago pass straight through as "clean".
-
-The customer's side is no better: the same passport photo scattered across a dozen merchant
-dashboards, or an on-chain "verified" badge that permanently links every wallet they will ever own.
-
----
-
-**Deflow** addresses this problem by providing the non-custodial payment gateway that runs KYC and AML inside a confidential enclave. Screening works out of the box from your very first payment. No sensitive documents ever reach you, us, or the blockchain. And the money is never ours to hold, at any point, by design.
-
-## Solution
-
-Deflow bridges the gap between regulatory requirements and Web3 privacy. We separate fund flow from compliance screening: money moves strictly between payer and merchant contracts, while checks run in an isolated enclave.
-
-### Features
-
-- **Non-custodial**: Deflow never takes custody of funds. Payments go into the merchant’s dedicated smart contract (`MerchantGateway`) during a short screening window. The contract has only two exits: forward to the merchant on approval, or refund to the payer if flagged or timed out. Funds cannot be frozen.
-
-- **Zero Data Liability**: Personal documents and paid AML intelligence never touch the merchant's servers, Deflow's backend, or the blockchain. Verification executes inside a Chainlink CRE enclave (TEE). The blockchain only ever receives an opaque, single-use `nullifier`, a verified tier, and an expiry timestamp.
-
-- **Compliance**: Deflow runs automated sanctions and fund provenance (KYT) checks out of the box for every payments in real time. Merchants toggle identity checks (Sumsub / World ID) only when transaction thresholds or local jurisdictions require it.
-
-
-### Value Proposition
-
-- **For Merchants:** Payment gateway of your own in one click, no-code, no documents in your database, no custodian holding your money. Funds can only ever go to you or back to the payer.
-
-- **For Customers:** Absolute privacy. Your passport is verified once, never stored on-chain, and merchants cannot cross-reference your wallets or purchase history. If a payment fails screening, the refund is automatic.
-
-- **For Compliance Teams:** Real-time enforcement, automated audit logs, per-person (anti-Sybil) velocity limits across multiple wallets, and instant revocation by nullifier.
-
-
-## Architecture
-
-![Architecture](./docs/ComplianceGateway.drawio.svg)
-
-### How it Works
-
-**Verification** — once per wallet, and only if the merchant asks for it:
-
-0. Customer opens the merchant's checkout and connects an ordinary wallet.
-1. Checkout drops a request `{gateway, wallet}` into the Relayer queue. Documents go from the Sumsub widget straight to Sumsub — they never pass through our backend.
-2. Once a minute the enclave pulls a snapshot of that queue itself.
-3. Inside the enclave: Sumsub lookup — documents, sanctions, PEP, adverse media.
-4. For level 1 it is World ID Selfie Check instead — proof bound to the wallet address.
-5. The enclave derives the `nullifier` from the document and the merchant's gateway address, and reports `{nullifier, level, expiry}` through DON consensus.
-6. Chainlink's `KeystoneForwarder` checks the DON signatures and writes grants, revocations and the heartbeat into `AttestationRegistry` in one batch.
-7. Checkout sees the result as an on-chain event.
-
-**Payment**
-
-8. Customer execute `pay()`. The funds are held in a pending window, not forwarded yet.
-9. The gateway reads the registry and enforces its own policy: required level, threshold, and a 24-hour running total tracked **per person**, so splitting a payment across wallets does not help.
-10. The gateway has `GatewayFactory` emit `PaymentOpened` — one fixed address, so gateways deployed later still trigger the workflow.
-11. The event wakes the workflow.
-12. The enclave screens where the money came from, against the risk ceiling the merchant set.
-13. A yes/no — never the score — goes through DON consensus.
-14. `settle(id, ok)` releases the payment to the merchant.
-15. On a "no", or via `reclaim()` after 15 minutes that anyone can call, the money goes back to the payer. It cannot get stuck.
-
-**Afterwards Monitoring**
-
-16. If monitoring flags someone later, the webhook revokes them **by nullifier** — every wallet that person used at that merchant dies at once.
-- An hourly heartbeat proves the monitoring is alive. After 48 hours of silence every attestation
-  stops working: a broken system must not look like a clean one.
-
-
-### Stack
-
-| Layer | Tech |
+| Today | With Deflow |
 |---|---|
-| Confidential compute | Chainlink CRE Confidential Workflow (TEE), Go |
-| Secrets | Chainlink Vault DON |
-| On-chain | Solidity, Base Sepolia, USDC and EURC|
-| Frontend | Next.js (checkout + merchant dashboard) |
-| Merchant custody | Privy Organization Wallets, policy engine, m-of-n key quorums |
+| An RFI answer is assembled by hand from five systems | The Payment Passport is ready when the request arrives |
+| A KYT score says "risky", not why the deposit was accepted | The checks, the rules and the person who decided are on record |
+| Payer data arrives after the deposit | Travel Rule data is collected before the deposit |
+| A withdrawal is explained after the fact | A Settlement Manifest comes with every withdrawal |
 
-### Components
+## Why Deflow
 
-| Component | Owner | Role |
+- **A decision, not a score.** KYT tools return a risk score. Deflow records which checks ran, under which rules and list versions, and who decided.
+- **One pack, not five systems.** The RFI answer is assembled when the decision is made, not by hand afterwards.
+- **Your keys, your funds.** Deflow never holds funds or signs transactions. With contracts, the contract carries out only your signed decision.
+
+## What Deflow does not claim
+
+- **That funds are clean.** It records which checks ran, under which rules, who decided, and what happened to the money.
+- **To hold funds or sign transactions.** You sign. Deflow never takes custody.
+- **To be a KYT provider.** It runs the checks you choose, with the providers you choose.
+- **To decide.** Your officer or your rules decide. Deflow recommends.
+
+## How it works
+
+```
+deposit --> checks ----------> your rules -------> decision ---------------> Payment Passport
+            KYT, sanctions,    approved by         signed by your officer    anyone can
+            split payments     your MLRO           or made automatically     verify it
+                                                      |
+                                                      | with contracts
+                                                      v
+                               the deposit waits in a smart contract you own;
+                               the contract carries out only your signed decision:
+                               credit to your pool | hold | freeze | return to payer
+```
+
+- **Who decides.** Routine credits and holds are made automatically under your rules. Everything else goes to an officer, who signs the decision personally.
+- **Quiet freezes.** On-chain, a freeze looks like any other check in progress, so nobody outside learns about it. A frozen deposit can never be sent back to the payer.
+
+## Configurations
+
+- **Without contracts.** Funds move as they do today. Deflow watches deposits to your addresses, runs the checks, applies your rules, records the decisions and issues a Payment Passport for each deposit.
+- **With contracts.** Adds a hold before credit. Each payer gets a personal deposit address, a smart contract that you own. The money waits there until your signed decision, and it can only go to your pool or back to the payer. Deflow only delivers your decision on-chain; it cannot forge one.
+
+## Evidence pack
+
+| Proof | Scope | Contents |
 |---|---|---|
-| `attestor-workflow` | us | CRE confidential workflow: verification, nullifier derivation, provenance screening, revocation, heartbeat |
-| `AttestationRegistry.sol` | us | Attestation registry, written only by the CRE workflow |
-| `GatewayFactory.sol` | us | Deploys merchant gateways |
-| `MerchantGateway.sol` | merchant | Policy, clearing window, `settle` by the CRE workflow, `reclaim` by payer|
-| `ProcessorHub.sol` | processor | Configuration (a): executes processor-signed EIP-712 decisions (CREDIT / HOLD / FREEZE / RETURN) delivered by the CRE forwarder or `deflow-workflow` |
-| `DepositAccount.sol` | processor | Per-payer CREATE2 deposit address; pays out only to the processor's pool or back to the payer |
-| `ProcessorHubFactory.sol` | us | Deploys processor hubs; fixed address for indexers and executors |
-| `compliance-backend` | processor | Configuration (b): deposit ingestion, checks, ruleset recommendations, signed decisions, Payment Passport and projections ([README](./compliance-backend/README.md)) |
-| `relay` | us | Queue of verification requests and webhooks + Sumsub WebSDK token minting. A dumb pipe: no enclave key, no read scope on Sumsub, signs nothing on-chain |
-| `checkout` / `dashboard` | us | Payer flow, merchant onboarding, policy, attestation and payment lists |
+| Payment Passport | per deposit | Checks and their sources, rule and list versions, the officer's decision, signed by you |
+| Settlement Manifest | per withdrawal | Which checked deposits make up the amount you withdraw |
+| Audit Export | per period | Rule versions, calibrations and decision statistics, so the logic can be reproduced |
 
-### External Providers
-
-| Provider | Used for | Notes |
-|---|---|---|
-| Chainlink | CRE Confidential Workflow, enclave secrets | running inside the TEE |
-| Privy | merchant organization wallet, policy engine, key quorums | `setPolicy` also works with a plain owner signature; quorum is an add-on |
-| Sumsub | KYC documents, AML on the person | sandbox; two app tokens — create-only for the relayer, read-only for the enclave |
-| GoPlus | fund provenance (KYT) | billed per payment |
-
-## Roadmap
-
-### Composable Deflow (planned OpenSpec changes)
-
-Deflow is becoming composable. Merchants and processors pick a configuration:
-
-- **(a) Contracts + recommendations + evidence pack.** This is the processor model from the one-pager. Funds wait in a contract owned by the processor. The processor signs the decision with its own key. A delivery executor (Chainlink CRE DON or `deflow-workflow`) only carries that signed decision on-chain, and the contract checks both the executor and the processor's signature.
-- **(b) Recommendations + evidence pack.** Shadow mode with no contracts. Deposits are observed on-chain and a Payment Passport is built for each one.
-
-Changes, in order:
-
-- [x] `add-landing-page`: a single-screen landing page in the dashboard design system. A "Beta" button leads into the existing login and dashboard flow. The page describes configurations (a) and (b) and links an external waitlist form.
-- [x] `design-compliance-backend`: design-only. Architecture of `compliance-backend`, the recommendations and Payment Passport service. Covers the domain model, storage, ingestion via eventscale, the format of the processor-signed decision, and modes (a) and (b).
-- [ ] `research-circle-wallets`: design-only spike. Compare Circle Wallets (developer-controlled, user-controlled, modular) with Privy key quorums, and decide between replacing Privy, offering both, or rejecting Circle.
-- [x] `processor-decision-contracts`: contracts for (a), in `contracts/src/processor/`:
-  - `ProcessorHub`, one per processor. It holds a signer set with per-decision masks, the authorised executors (CRE forwarder and/or `deflow-workflow` submitters), the pool and the payment state.
-  - `DepositAccount`, one per payer, at a CREATE2 address that works before deployment. Payers fund it with a plain ERC-20 transfer, and it can only pay out to the pool or back to its payer.
-  - The EIP-712 `Decision{paymentId, decision, token, amount, packHash, nonce, deadline}`. `token` and `amount` were added to the D7 struct, because a plain transfer leaves no on-chain record of the amount. The `cast` vector is in `contracts/test/processor/fixtures/`.
-  - Neutral statuses `PENDING`, `HELD`, `CREDITED`, `RETURNED`. FREEZE is `HELD` plus a lock commitment and can never become a return.
-  - No public `reclaim` and no payer timeout in version 1.
-  - `ProcessorHubFactory`.
-- [x] `add-compliance-backend`: first slice of `compliance-backend/`, a single-tenant Go service for configuration (b):
-  - ingests deposits through eventscale (durable JetStream consumer) and an `eth_getLogs` reconciler, which is the source of truth;
-  - runs the checks: KYT through GoPlus (demo only), sanctions address lists, structuring (`SPLIT-03`) and the issuer blacklist;
-  - applies an MLRO-approved ruleset and records EIP-712 decisions, by the policy key or by an officer's own wallet;
-  - issues Payment Passport packs with roots, JWS and a journal, plus per-profile projections that `verify_pack.py` accepts (JSON input added).
-- [ ] compliance-backend follow-ups, each a separate change:
-  - PDF rendering, RFC 3161 timestamps and the Merkle anchor;
-  - checkout intake: Travel Rule data and wallet-ownership proof;
-  - name and counterparty screening, and production KYT adapters;
-  - configuration (a): ingestion of `DecisionExecuted` and decision delivery over NATS `decisions.<chainId>`;
-  - officer console UI;
-  - KMS-backed keys and OIDC;
-  - Annex 3 reporting records.
-- [ ] `add-deflow-workflow`: a self-hosted analog of the DON. It takes processor-signed decisions from `compliance-backend` (NATS `decisions.<chainId>`) and submits them on-chain right away. It cannot forge a decision. Each gateway chooses `chainlink-cre` or `deflow` as its executor. Depends on `processor-decision-contracts`, `add-compliance-backend` and the eventscale fixes.
-- [ ] eventscale fixes (in the eventscale repo), found in spike T2:
-  - a per-network `confirmations` depth;
-  - fix the cursor encoding, which today panics on restart;
-  - durable SDK consumers with a selectable deliver policy.
-- [ ] `wallet-provider-abstraction`: Privy and Circle side by side in the dashboard. Built only if `research-circle-wallets` recommends offering both.
-- [ ] Settlement Manifest and Audit Export: out of the first backend iteration, but the backend data model must support them.
-
-### Backlog
-
-- [ ] Wallet rebind by signature — bind a new address to an existing attestation without a repeat
-  Sumsub session.
-- [ ] Sumsub Reusable KYC across businesses.
-- [ ] Multi-token gateways (per-token decimals, fee-on-transfer accounting, reentrancy).
-- [ ] Whitelist payment tokens in `GatewayFactory` — `deploy()` currently takes any ERC20 from calldata; only USDC/EURC are offered in the UI.
-- [ ] Production Sumsub keys; BYOK AML aggregators above ~50k checks/month.
-- [ ] Fiat off-ramp
-- [ ] Cross-chain payment router.
-
+Templates, two example Payment Passports and a script that verifies them are in [`docs/evidence-pack/`](./docs/evidence-pack/).
