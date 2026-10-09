@@ -12,17 +12,6 @@ The landing page SHALL be served at `/` and SHALL NOT redirect to the dashboard.
 - **WHEN** a visitor with no session opens `/`
 - **THEN** the landing page renders, no login prompt is shown, and no Privy script is loaded
 
-### Requirement: Beta entry in the top-right corner
-The landing page SHALL show a "Beta" control in the header, next to the "Request a pilot" button, that navigates to the dashboard (`/gateways`). From there the existing login, setup, and dashboard flow applies unchanged.
-
-#### Scenario: Signed-out visitor clicks Beta
-- **WHEN** a visitor without a session clicks "Beta"
-- **THEN** they reach the dashboard's sign-in screen
-
-#### Scenario: Signed-in merchant clicks Beta
-- **WHEN** a merchant with a session and a completed setup clicks "Beta"
-- **THEN** they reach the gateways page
-
 ### Requirement: Core message
 The landing page SHALL state the promise: a proof for every deposit and every withdrawal. It SHALL describe Deflow as an evidence layer for stablecoin deposits that gives regulated crypto businesses a signed proof of how each deposit was checked and decided. It SHALL name the audience: processors, exchanges, off-ramps and custodians. The hero SHALL show a sample Payment Passport card, captioned as a sample with illustrative names, addresses and hashes.
 
@@ -76,7 +65,7 @@ The How it works section SHALL show the flow as two parallel paths. The money pa
 - **THEN** it announces a region named "How Deflow works" and reads a text summary of both paths, without reading the drawn boxes a second time
 
 ### Requirement: Header navigation
-The header SHALL show the Deflow logo, anchor links to the How it works, Evidence, Control, and Pilot sections, the Beta link, and a "Request a pilot" button. Every anchor link SHALL lead to a section that exists on the page. At narrow widths, the anchor links MAY be hidden, but the logo, Beta, and "Request a pilot" SHALL remain.
+The header SHALL show the Deflow logo, anchor links to the How it works, Evidence, Control, and Pilot sections, and a "Request a pilot" button. It SHALL NOT show a Beta link or any other link to the dashboard. Every anchor link SHALL lead to a section that exists on the page. At narrow widths, the anchor links MAY be hidden, but the logo and "Request a pilot" SHALL remain.
 
 #### Scenario: Anchor resolves
 - **WHEN** the visitor clicks any header anchor link
@@ -84,7 +73,11 @@ The header SHALL show the Deflow logo, anchor links to the How it works, Evidenc
 
 #### Scenario: Narrow header
 - **WHEN** the page is viewed at 390px width
-- **THEN** the logo, Beta, and "Request a pilot" are visible in the header
+- **THEN** the logo and "Request a pilot" are visible in the header
+
+#### Scenario: No Beta link
+- **WHEN** the landing page renders
+- **THEN** the header contains no "Beta" link and no link to `/gateways`
 
 ### Requirement: No horizontal page scroll
 The landing page SHALL scroll vertically at every viewport and SHALL NOT scroll horizontally. Where the flow diagram is wider than the viewport, it SHALL scroll horizontally inside its own container, and that container SHALL be reachable by keyboard.
@@ -101,7 +94,7 @@ The landing page SHALL scroll vertically at every viewport and SHALL NOT scroll 
 The landing page SHALL use the Deflow brand system: Schibsted Grotesk and IBM Plex Mono, the Deflow blue and ink scales, and the `deflow.` logo. Its tokens and rules SHALL NOT change the appearance of the dashboard, checkout, or approval pages, including after client-side navigation from the landing page.
 
 #### Scenario: No leak after navigation
-- **WHEN** the visitor opens `/`, then clicks Beta and reaches `/gateways`
+- **WHEN** the visitor opens `/`, then navigates client-side to `/gateways`
 - **THEN** the dashboard renders in its own typeface and colours, unchanged from a direct visit to `/gateways`
 
 #### Scenario: Brand on the landing page

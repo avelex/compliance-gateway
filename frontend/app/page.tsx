@@ -101,7 +101,6 @@ export default function Landing() {
               <a href="#pilot">Pilot</a>
             </nav>
             <div className={s.acts}>
-              <Link href="/gateways" className={s.tag}>Beta</Link>
               {REQUEST_HREF && <a href="#pilot" className={s.btn}>Request a pilot</a>}
             </div>
           </div>

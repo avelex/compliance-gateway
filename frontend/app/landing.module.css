@@ -62,8 +62,6 @@
 .root .nav a { font-size: 14px; font-weight: 600; color: var(--ink-800); text-decoration: none; white-space: nowrap; }
 .root .nav a:hover { color: var(--blue-700); }
 .acts { display: flex; align-items: center; gap: 28px; }
-.root .tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ink-300); border-radius: var(--radius-2); font-size: 12px; font-weight: 500; color: var(--ink-700); text-decoration: none; }
-.root .tag:hover { border-color: var(--ink-950); color: var(--ink-950); }
 
 /* Hero */
 .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 48px; align-items: center; padding-top: 72px; padding-bottom: 104px; }
