@@ -110,6 +110,7 @@ export function LandingPassport() {
         <div className={s.mrz} aria-hidden>PP&lt;DEFLOW&lt;20261008&lt;00412&lt;&lt;USDC&lt;12480&lt;00&lt;&lt;CREDIT&lt;&lt;&lt;</div>
         <div ref={shine} className={s.shine} aria-hidden />
       </div>
+      <p className={s.cap}>Sample passport. Names, addresses and hashes are illustrative.</p>
     </div>
   );
 }

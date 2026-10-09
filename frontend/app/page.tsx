@@ -32,9 +32,17 @@ export const metadata: Metadata = {
 // Loaded here, not in the root layout, so the dashboard never downloads it.
 const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", display: "swap" });
 
-// Read at build time like every NEXT_PUBLIC_ value. Empty means no request button at all,
-// never a button that leads nowhere. Deflow itself collects no pilot or waitlist data.
+// Read at build time like every NEXT_PUBLIC_ value. The external form wins; the email is the
+// fallback. With neither set, no request button renders at all, never one that leads nowhere.
+// Deflow itself collects no pilot or waitlist data.
 const WAITLIST_URL = process.env.NEXT_PUBLIC_WAITLIST_URL ?? "";
+const PILOT_EMAIL = process.env.NEXT_PUBLIC_PILOT_EMAIL ?? "";
+const REQUEST_HREF =
+  WAITLIST_URL ||
+  (PILOT_EMAIL &&
+    `mailto:${PILOT_EMAIL}?subject=${encodeURIComponent("Deflow pilot request")}&body=${encodeURIComponent(
+      "Work email:\nCompany:\nCASP licence country:\n",
+    )}`);
 
 const cx = (...names: string[]) => names.map((n) => s[n]).join(" ");
 
@@ -60,7 +68,7 @@ const DOCS: [LucideIcon, string, string, string, string[]][] = [
 ];
 const CONTROL: [LucideIcon, string, string][] = [
   [Lock, "Your contract", "Deployed per payer and owned by you."],
-  [KeyRound, "Your key", "Every decision is signed by your officer."],
+  [KeyRound, "Your key", "Every decision is signed by your officer, or by your policy key under rules your MLRO approved."],
   [ListChecks, "Your providers", "Deflow calls the KYT and sanctions sources you already use."],
   [Scale, "Your rules", "Policies are versioned. Every passport cites the version it was decided under."],
 ];
@@ -70,8 +78,9 @@ const STATS = [
   ["USDC, EURC", "On EVM networks"],
 ];
 
-const Logo = ({ h }: { h: number }) => (
-  <Image src="/deflow-logo.png" alt="Deflow" width={Math.round((h * 830) / 210)} height={h} />
+// Repeats of the logo pass alt="" so a screen reader announces the name once per landmark.
+const Logo = ({ h, alt = "Deflow" }: { h: number; alt?: string }) => (
+  <Image src="/deflow-logo.png" alt={alt} width={Math.round((h * 830) / 210)} height={h} />
 );
 
 export default function Landing() {
@@ -82,13 +91,13 @@ export default function Landing() {
         <div className={s.hdr}>
           <div className={s.wrap}>
             <Link href="/" aria-label="Deflow home"><Logo h={28} /></Link>
-            <nav className={s.nav}>
+            <nav className={s.nav} aria-label="Sections">
               <a href="#how">How it works</a>
               <a href="#evidence">Evidence</a>
               <a href="#control">Control</a>
               <a href="#pilot">Pilot</a>
               <Link href="/gateways" className={s.tag}>Beta</Link>
-              <a href="#pilot" className={s.btn}>Request a pilot</a>
+              {REQUEST_HREF && <a href="#pilot" className={s.btn}>Request a pilot</a>}
             </nav>
           </div>
         </div>
@@ -105,7 +114,7 @@ export default function Landing() {
             </p>
             <p className={s.aud}>For processors, exchanges, off-ramps and custodians.</p>
             <div className={s.ctas}>
-              <a href="#pilot" className={cx("btn", "lg")}>Request a pilot</a>
+              {REQUEST_HREF && <a href="#pilot" className={cx("btn", "lg")}>Request a pilot</a>}
               <a href="#how" className={cx("btn", "lg", "sec")}>How it works</a>
             </div>
           </div>
@@ -114,7 +123,7 @@ export default function Landing() {
 
         <section className={s.manifest} id="manifest">
           <div className={cx("wrap", "band")}>
-            <div className={s.rule}><Logo h={22} /></div>
+            <div className={s.rule}><Logo h={22} alt="" /></div>
             <div className={s.cols}>
               <h2 className={s.claim}>Every stablecoin deposit you receive has to be explained sooner or later.</h2>
               <div className={s.mtext}>
@@ -123,10 +132,10 @@ export default function Landing() {
                   approved by your MLRO, and records a decision signed by your compliance officer or made automatically
                   under your rules.
                 </p>
-                <p><b>Each deposit gets a Payment Passport that anyone can verify, ready before the next party asks.</b></p>
+                <p><b>Each deposit gets a Payment Passport its recipient can verify independently, ready before the next party asks.</b></p>
               </div>
             </div>
-            <div className={cx("rule", "t")}><Logo h={22} /></div>
+            <div className={cx("rule", "t")}><Logo h={22} alt="" /></div>
           </div>
         </section>
 
@@ -175,7 +184,7 @@ export default function Landing() {
         <section className={s.evidence} id="evidence">
           <div className={cx("wrap", "band")}>
             <Head title="Evidence pack">
-              Deflow does not claim funds are clean. It records which checks passed, under which rules, who decided and
+              Deflow does not claim funds are clean. It records which checks ran, under which rules, who decided and
               what the contract executed.
             </Head>
             <div className={s.cards}>
@@ -217,23 +226,30 @@ export default function Landing() {
         <section className={s.pilot} id="pilot">
           <div className={cx("wrap", "band", "cols")} style={{ "--min": "340px" } as React.CSSProperties}>
             <Head title="Run it on real payments for 3–4 weeks.">
-              We connect one contract on testnet, then mainnet, and answer 2–3 real RFIs with Payment Passports.
+              We start with a Settlement Manifest over your last 90 days of deposits, then run alongside your flow in shadow mode, with funds moving as they do today, and answer 2–3 real RFIs with Payment Passports.
               <span className={s.stats}>
                 {STATS.map(([value, label]) => (
                   <span key={value}><b>{value}</b>{label}</span>
                 ))}
               </span>
             </Head>
-            <div className={s.req}>
-              <h3>Request a pilot</h3>
-              <p>Tell us your work email, company and CASP licence country.</p>
-              {WAITLIST_URL && (
-                <a className={cx("btn", "lg")} href={WAITLIST_URL} target="_blank" rel="noopener noreferrer">
+            {REQUEST_HREF && (
+              <div className={s.req}>
+                <h3>Request a pilot</h3>
+                <p>
+                  Send us your work email, company and CASP licence country. We sign an NDA and a DPA before you share
+                  any payment data.
+                </p>
+                <a
+                  className={cx("btn", "lg")}
+                  href={REQUEST_HREF}
+                  {...(WAITLIST_URL && { target: "_blank", rel: "noopener noreferrer" })}
+                >
                   Send request
                 </a>
-              )}
-              <small>We reply within one-two working days.</small>
-            </div>
+                <small>We reply within one or two working days.</small>
+              </div>
+            )}
           </div>
         </section>
       </main>
