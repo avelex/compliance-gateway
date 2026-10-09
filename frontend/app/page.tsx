@@ -60,11 +60,12 @@ const STEPS: [LucideIcon, string, string][] = [
   [FileCheck2, "Payment Passport", "var(--ink-950)"],
 ];
 const DOCS: [LucideIcon, string, string, string, string[]][] = [
-  [FileCheck2, "Per payment", "Payment Passport", "For the off-ramp, the bank and the regulator.",
-    ["Originator and beneficiary", "Checks, scores and list dates", "Policy version and signer", "Executed transaction"]],
-  [FileSignature, "Per withdrawal", "Settlement Manifest", "Shows which passported payments make up a withdrawal from your pool.",
-    ["Payments included", "Passport references", "Withdrawal transaction"]],
-  [Download, "Per period", "Audit Export", "Every decision for a period, in a format your auditor can work with.",
+  [FileCheck2, "Per deposit", "Payment Passport",
+    "How one deposit was checked and decided, signed by you. The off-ramp, the bank and the regulator each see what their profile allows.",
+    ["Originator and beneficiary", "Checks, scores and list versions", "Policy version and signer", "Executed transaction"]],
+  [FileSignature, "Per withdrawal", "Settlement Manifest", "Which checked deposits make up each withdrawal from your pool.",
+    ["Deposits included", "Passport references", "Withdrawal transaction"]],
+  [Download, "Per period", "Audit Export", "Every decision in a period with the rule versions behind it, so your auditor can reproduce the logic.",
     ["All passports and decisions", "Policy changes", "Holds, freezes and returns"]],
 ];
 const CONTROL: [LucideIcon, string, string][] = [
