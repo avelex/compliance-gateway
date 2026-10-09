@@ -116,10 +116,13 @@ export function LandingPassport() {
                 <Hex value={TO} />
               </div>
             </div>
-            <div className={s.facts}>
-              <div><span className={s.k}>Checks</span>4 of 4 passed</div>
-              <div><span className={s.k}>Signed</span>J. Kuusk</div>
-              <div><span className={s.k}>Executed</span><Hex value={TX} /></div>
+            <div className={s.proof}>
+              <div className={s.ph}><span className={s.k}>Checks</span><b>4 of 4 passed</b></div>
+              <div className={s.seg} aria-hidden><i /><i /><i /><i /></div>
+              <div className={s.sub}>
+                <div><span className={s.k}>Signed</span>J. Kuusk</div>
+                <div><span className={s.k}>Executed</span><Hex value={TX} /></div>
+              </div>
             </div>
           </div>
         </div>
