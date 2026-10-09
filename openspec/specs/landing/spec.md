@@ -39,11 +39,11 @@ The landing page SHALL state the promise: a proof for every deposit and every wi
 - **THEN** it states that the decision is signed by the merchant's officer or by the merchant's policy key under rules the MLRO approved, and that Deflow neither signs transactions nor holds funds
 
 ### Requirement: Three proofs listed
-The landing page SHALL name the three proofs of the evidence pack, each with its scope: Payment Passport (per payment), Settlement Manifest (per withdrawal), and Audit Export (per period). Each proof SHALL list what it contains.
+The landing page SHALL name the three proofs of the evidence pack, each with its scope: Payment Passport (per deposit), Settlement Manifest (per withdrawal), and Audit Export (per period). Each proof SHALL list what it contains. The Payment Passport SHALL state that each recipient sees what its profile allows.
 
 #### Scenario: Proofs present
 - **WHEN** the landing page renders
-- **THEN** all three proof names, their scopes, and their contents are visible
+- **THEN** all three proof names, their scopes, and their contents are visible, and the Payment Passport scope reads "Per deposit"
 
 ### Requirement: External waitlist link
 The pilot request card SHALL offer a "Send request" call to action. When `NEXT_PUBLIC_WAITLIST_URL` is set, it SHALL open that external form in a new tab. Otherwise, when `NEXT_PUBLIC_PILOT_EMAIL` is set, it SHALL open a pre-filled email to that address. Deflow SHALL NOT collect or store pilot or waitlist data. When neither is configured, the request card and every "Request a pilot" button SHALL NOT be rendered.
