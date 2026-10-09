@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { ArrowRight, Copy } from "lucide-react";
 import s from "@/app/landing.module.css";
 
@@ -13,7 +14,11 @@ const TX = "0x9c0d5e2f8a1b3c4d6e7f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b77ab";
 const short = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
 
 function Hex({ value, label = short(value) }: { value: string; label?: string }) {
-  const [ok, setOk] = useState(false);
+  const [status, setStatus] = useState("");
+  const report = (msg: string) => {
+    setStatus(msg);
+    setTimeout(() => setStatus(""), 1500);
+  };
   return (
     <span className={s.hex}>
       <span className={s.mono}>{label}</span>
@@ -21,15 +26,16 @@ function Hex({ value, label = short(value) }: { value: string; label?: string })
         type="button"
         title="Copy"
         aria-label={`Copy ${label}`}
-        className={ok ? `${s.cp} ${s.ok}` : s.cp}
+        className={status === "Copied" ? `${s.cp} ${s.ok}` : s.cp}
         onClick={() => {
-          navigator.clipboard?.writeText(value);
-          setOk(true);
-          setTimeout(() => setOk(false), 600);
+          // The clipboard API is missing on insecure origins and can reject; say so instead of flashing success.
+          if (!navigator.clipboard) return report("Copy is not available here");
+          navigator.clipboard.writeText(value).then(() => report("Copied"), () => report("Copy failed"));
         }}
       >
         <Copy size={12} strokeWidth={2} aria-hidden />
       </button>
+      <span className={s.sr} role="status">{status}</span>
     </span>
   );
 }
@@ -41,6 +47,8 @@ export function LandingPassport() {
   const back2 = useRef<HTMLDivElement>(null);
   const holo = useRef<HTMLDivElement>(null);
   const shine = useRef<HTMLDivElement>(null);
+
+  const frame = useRef(0);
 
   // Direct style writes, not state: a mousemove re-render per frame would be wasted work.
   const apply = (px: number, py: number, on: boolean) => {
@@ -59,10 +67,19 @@ export function LandingPassport() {
       ref={stack}
       className={s.stack}
       onMouseMove={(e) => {
-        const r = stack.current!.getBoundingClientRect();
-        apply((e.clientX - r.left) / r.width - 0.5, (e.clientY - r.top) / r.height - 0.5, true);
+        // The tilt is decoration: skip it entirely for visitors who asked for less motion.
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const { clientX, clientY } = e;
+        cancelAnimationFrame(frame.current);
+        frame.current = requestAnimationFrame(() => {
+          const r = stack.current!.getBoundingClientRect();
+          apply((clientX - r.left) / r.width - 0.5, (clientY - r.top) / r.height - 0.5, true);
+        });
       }}
-      onMouseLeave={() => apply(0, 0, false)}
+      onMouseLeave={() => {
+        cancelAnimationFrame(frame.current);
+        apply(0, 0, false);
+      }}
     >
       <div ref={back2} className={`${s.back} ${s.b2}`} aria-hidden><div /></div>
       <div ref={back1} className={`${s.back} ${s.b1}`} aria-hidden><div /></div>
@@ -72,8 +89,7 @@ export function LandingPassport() {
             <div className={s.ppt}>
               <span>Deflow</span>
               <div ref={holo} className={s.holo}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- decorative seal, blend mode needs a plain img */}
-                <img src="/deflow-logo.png" alt="" />
+                <Image src="/deflow-logo.png" alt="" width={46} height={12} />
               </div>
             </div>
             <div className={s.ppn}>Payment Passport</div>

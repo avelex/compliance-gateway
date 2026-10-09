@@ -88,6 +88,7 @@ const Logo = ({ h, alt = "Deflow" }: { h: number; alt?: string }) => (
 export default function Landing() {
   return (
     <div className={`${schibsted.variable} ${s.root}`}>
+      <a href="#main" className={s.skip}>Skip to content</a>
       <header>
         <div className={s.stripe} aria-hidden><div /><div /><div /></div>
         <div className={s.hdr}>
@@ -98,14 +99,16 @@ export default function Landing() {
               <a href="#evidence">Evidence</a>
               <a href="#control">Control</a>
               <a href="#pilot">Pilot</a>
+            </nav>
+            <div className={s.acts}>
               <Link href="/gateways" className={s.tag}>Beta</Link>
               {REQUEST_HREF && <a href="#pilot" className={s.btn}>Request a pilot</a>}
-            </nav>
+            </div>
           </div>
         </div>
       </header>
 
-      <main>
+      <main id="main" tabIndex={-1}>
         <section className={cx("wrap", "hero")}>
           <div className={s.copy}>
             <h1>A proof for every deposit and every withdrawal.</h1>
@@ -146,6 +149,7 @@ export default function Landing() {
             <Head title="How it works">
               Each payment waits in your contract while Deflow collects the evidence. You decide, and the contract executes only what you signed.
             </Head>
+            <p className={s.swipe} aria-hidden>Scroll sideways to see the full flow.</p>
             <div className={s["dg-box"]} tabIndex={0} role="region" aria-label="How Deflow works" data-scroll-region>
               <p className={s.sr}>
                 Money path: the payer pays into your contract, which holds the payment until you decide, then credits,
