@@ -1,16 +1,6 @@
-# landing Specification
+# Spec Delta
 
-## Purpose
-The public entry page of Deflow. It explains what Deflow does and in which configurations, offers the waitlist, and leads beta users into the existing dashboard.
-
-## Requirements
-
-### Requirement: Landing is served at the root
-The landing page SHALL be served at `/` and SHALL NOT redirect to the dashboard. The landing page SHALL render without authentication and SHALL NOT load Privy.
-
-#### Scenario: Anonymous visitor opens root
-- **WHEN** a visitor with no session opens `/`
-- **THEN** the landing page renders, no login prompt is shown, and no Privy script is loaded
+## MODIFIED Requirements
 
 ### Requirement: Beta entry in the top-right corner
 The landing page SHALL show a "Beta" control in the header, next to the "Request a pilot" button, that navigates to the dashboard (`/gateways`). From there the existing login, setup, and dashboard flow applies unchanged.
@@ -89,16 +79,17 @@ The landing page SHALL scroll vertically at every viewport and SHALL NOT scroll 
 - **WHEN** the page is viewed at 1280×720
 - **THEN** the hero and the Payment Passport card are visible without scrolling, and the document has no horizontal scroll
 
-### Requirement: Deflow brand system scoped to the landing page
-The landing page SHALL use the Deflow brand system: Schibsted Grotesk and IBM Plex Mono, the Deflow blue and ink scales, and the `deflow.` logo. Its tokens and rules SHALL NOT change the appearance of the dashboard, checkout, or approval pages, including after client-side navigation from the landing page.
+## REMOVED Requirements
 
-#### Scenario: No leak after navigation
-- **WHEN** the visitor opens `/`, then clicks Beta and reaches `/gateways`
-- **THEN** the dashboard renders in its own typeface and colours, unchanged from a direct visit to `/gateways`
+### Requirement: Configurations explained
+**Reason**: The new design drops the "Without contracts" / "With contracts" control. The diagram always shows the contract.
+**Migration**: None.
 
-#### Scenario: Brand on the landing page
-- **WHEN** the landing page renders
-- **THEN** the headline is set in Schibsted Grotesk and the header shows the `deflow.` logo with alt text "Deflow"
+### Requirement: Explanatory sections
+**Reason**: Problem, Why Deflow, and What Deflow does not claim are replaced by the Manifest, Evidence pack, Control, and Pilot sections.
+**Migration**: None.
+
+## ADDED Requirements
 
 ### Requirement: Landing sections
 Below the hero, the landing page SHALL show, in this order: Manifest, How it works, Evidence pack, Control ("Keys and funds stay with you."), and Pilot ("Run it on real payments for 3–4 weeks.").
