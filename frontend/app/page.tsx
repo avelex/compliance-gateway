@@ -47,6 +47,22 @@ const REQUEST_HREF =
 
 const cx = (...names: string[]) => names.map((n) => s[n]).join(" ");
 
+const SPECIMENS = [
+  ["Credited, off-ramp copy", "/evidence/Payment_Passport_Specimen_A_Credited_OffRamp.pdf"],
+  ["Frozen, FIU copy", "/evidence/Payment_Passport_Specimen_B_Frozen_FIU.pdf"],
+];
+
+function Specimens() {
+  return (
+    <p className={s.specimens}>
+      <span>Specimens, fictional data:</span>
+      {SPECIMENS.map(([label, href]) => (
+        <a key={href} href={href} target="_blank" rel="noopener">{label}</a>
+      ))}
+    </p>
+  );
+}
+
 const OUTS: [LucideIcon, string, string][] = [
   [Wallet, "Credit", "var(--green-600)"],
   [Pause, "Hold", "var(--ink-700)"],
@@ -121,6 +137,7 @@ export default function Landing() {
               {REQUEST_HREF && <a href="#pilot" className={cx("btn", "lg")}>Request a pilot</a>}
               <a href="#how" className={cx("btn", "lg", "sec")}>How it works</a>
             </div>
+            <Specimens />
           </div>
           <LandingPassport />
         </section>
@@ -212,6 +229,7 @@ export default function Landing() {
                         <li key={item}><Check size={14} strokeWidth={2} aria-hidden />{item}</li>
                       ))}
                     </ul>
+                    {i === 0 && <Specimens />}
                   </div>
                 </article>
               ))}
