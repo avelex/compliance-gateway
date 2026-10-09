@@ -2,8 +2,25 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Schibsted_Grotesk } from "next/font/google";
-import { FileCheck2, FileSignature, ListChecks, type LucideIcon } from "lucide-react";
-import { LandingFlow } from "@/components/landing-flow";
+import {
+  Check,
+  Download,
+  FileCheck2,
+  FileSignature,
+  IdCard,
+  KeyRound,
+  Landmark,
+  ListChecks,
+  Lock,
+  Pause,
+  Scale,
+  Snowflake,
+  Undo2,
+  User,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+import { LandingPassport } from "@/components/landing-passport";
 import s from "./landing.module.css";
 
 export const metadata: Metadata = {
@@ -15,154 +32,240 @@ export const metadata: Metadata = {
 // Loaded here, not in the root layout, so the dashboard never downloads it.
 const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", display: "swap" });
 
-// Read at build time like every NEXT_PUBLIC_ value. Empty means no waitlist button at all,
-// never a button that leads nowhere.
+// Read at build time like every NEXT_PUBLIC_ value. Empty means no request button at all,
+// never a button that leads nowhere. Deflow itself collects no pilot or waitlist data.
 const WAITLIST_URL = process.env.NEXT_PUBLIC_WAITLIST_URL ?? "";
 
 const cx = (...names: string[]) => names.map((n) => s[n]).join(" ");
 
-const DOCS: [LucideIcon, string, string, string][] = [
-  [FileCheck2, "Payment Passport", "per deposit", "Checks and their sources, rule and list versions, the officer’s decision, signed by you."],
-  [FileSignature, "Settlement Manifest", "per withdrawal", "Which checked deposits make up the amount you withdraw."],
-  [ListChecks, "Audit Export", "per period", "Rule versions, calibrations and decision statistics, so the logic can be reproduced."],
+const OUTS: [LucideIcon, string, string][] = [
+  [Wallet, "Credit", "var(--green-600)"],
+  [Pause, "Hold", "var(--ink-700)"],
+  [Snowflake, "Freeze", "var(--red-600)"],
+  [Undo2, "Return", "var(--amber-600)"],
 ];
-const PROBLEM = [
-  ["An RFI answer is assembled by hand from five systems", "The Payment Passport is ready when the request arrives"],
-  ["A KYT score says “risky”, not why the deposit was accepted", "The checks, the rules and the person who decided are on record"],
-  ["Payer data arrives after the deposit", "Travel Rule data is collected before the deposit"],
-  ["A withdrawal is explained after the fact", "A Settlement Manifest comes with every withdrawal"],
+const STEPS: [LucideIcon, string, string][] = [
+  [ListChecks, "Checks", "var(--ink-800)"],
+  [Scale, "Your rules", "var(--ink-800)"],
+  [KeyRound, "Signed decision", "var(--blue-500)"],
+  [FileCheck2, "Payment Passport", "var(--ink-950)"],
 ];
-const WHY = [
-  ["A decision, not a score.", "KYT tools return a risk score. Deflow records which checks ran, under which rules and list versions, and who decided."],
-  ["One pack, not five systems.", "The RFI answer is assembled when the decision is made, not by hand afterwards."],
-  ["Your keys, your funds.", "Deflow never holds funds or signs transactions. With contracts, the contract carries out only your signed decision."],
+const DOCS: [LucideIcon, string, string, string, string[]][] = [
+  [FileCheck2, "Per payment", "Payment Passport", "For the off-ramp, the bank and the regulator.",
+    ["Originator and beneficiary", "Checks, scores and list dates", "Policy version and signer", "Executed transaction"]],
+  [FileSignature, "Per withdrawal", "Settlement Manifest", "Shows which passported payments make up a withdrawal from your pool.",
+    ["Payments included", "Passport references", "Withdrawal transaction"]],
+  [Download, "Per period", "Audit Export", "Every decision for a period, in a format your auditor can work with.",
+    ["All passports and decisions", "Policy changes", "Holds, freezes and returns"]],
 ];
-const HOW = [
-  ["Who decides.", "Routine credits and holds are made automatically under your rules. Everything else goes to an officer, who signs the decision personally."],
-  ["Quiet freezes.", "On-chain, a freeze looks like any other check in progress, so nobody outside learns about it. A frozen deposit can never be sent back to the payer."],
+const CONTROL: [LucideIcon, string, string][] = [
+  [Lock, "Your contract", "Deployed per payer and owned by you."],
+  [KeyRound, "Your key", "Every decision is signed by your officer."],
+  [ListChecks, "Your providers", "Deflow calls the KYT and sanctions sources you already use."],
+  [Scale, "Your rules", "Policies are versioned. Every passport cites the version it was decided under."],
 ];
-const NOT = [
-  ["That funds are clean.", "It records which checks ran, under which rules, who decided, and what happened to the money."],
-  ["To hold funds or sign transactions.", "You sign. Deflow never takes custody."],
-  ["To be a KYT provider.", "It runs the checks you choose, with the providers you choose."],
-  ["To decide.", "Your officer or your rules decide. Deflow recommends."],
+const STATS = [
+  ["3–4 weeks", "Pilot length"],
+  ["2–3 RFIs", "Answered with passports"],
+  ["USDC, EURC", "On EVM networks"],
 ];
+
+const Logo = ({ h }: { h: number }) => (
+  <Image src="/deflow-logo.png" alt="Deflow" width={Math.round((h * 830) / 210)} height={h} />
+);
 
 export default function Landing() {
   return (
     <div className={`${schibsted.variable} ${s.root}`}>
-      <header className={s.hdr}>
-        <div className={s.wrap}>
-          <Link href="/" aria-label="Deflow home">
-            <Image src="/deflow-logo.png" alt="Deflow" width={87} height={22} priority />
-          </Link>
-          <nav className={s.nav}>
-            <a href="#problem">Problem</a>
-            <a href="#why">Why Deflow</a>
-            <a href="#how">How it works</a>
-            <a href="#evidence">Evidence pack</a>
-            <Link href="/gateways" className={s.tag}>Beta</Link>
-          </nav>
+      <header>
+        <div className={s.stripe} aria-hidden><div /><div /><div /></div>
+        <div className={s.hdr}>
+          <div className={s.wrap}>
+            <Link href="/" aria-label="Deflow home"><Logo h={28} /></Link>
+            <nav className={s.nav}>
+              <a href="#how">How it works</a>
+              <a href="#evidence">Evidence</a>
+              <a href="#control">Control</a>
+              <a href="#pilot">Pilot</a>
+              <Link href="/gateways" className={s.tag}>Beta</Link>
+              <a href="#pilot" className={s.btn}>Request a pilot</a>
+            </nav>
+          </div>
         </div>
       </header>
 
       <main>
-        <section className={cx("wrap", "fold")}>
-          <div className={s.top}>
-            <div className={s.hero}>
-              <h1>A proof for every deposit and every withdrawal.</h1>
-              <div className={s.side}>
-                <p className={s.lead}>
-                  Deflow is an evidence layer for stablecoin deposits.
-                  <br />
-                  It gives regulated crypto businesses a signed proof of how each deposit was checked and decided.
+        <section className={cx("wrap", "hero")}>
+          <div className={s.copy}>
+            <h1>A proof for every deposit and every withdrawal.</h1>
+            <p className={s.lead}>
+              Deflow is an evidence layer for stablecoin deposits.
+              <br />
+              It gives regulated crypto businesses a signed proof of how each deposit was checked and decided.
+            </p>
+            <p className={s.aud}>For processors, exchanges, off-ramps and custodians.</p>
+            <div className={s.ctas}>
+              <a href="#pilot" className={cx("btn", "lg")}>Request a pilot</a>
+              <a href="#how" className={cx("btn", "lg", "sec")}>How it works</a>
+            </div>
+          </div>
+          <LandingPassport />
+        </section>
+
+        <section className={s.manifest} id="manifest">
+          <div className={cx("wrap", "band")}>
+            <div className={s.rule}><Logo h={22} /></div>
+            <div className={s.cols}>
+              <h2 className={s.claim}>Every stablecoin deposit you receive has to be explained sooner or later.</h2>
+              <div className={s.mtext}>
+                <p>
+                  To a counterparty, a bank or a regulator. Deflow runs the compliance checks you choose, applies rules
+                  approved by your MLRO, and records a decision signed by your compliance officer or made automatically
+                  under your rules.
                 </p>
-                <p className={s.aud}>For processors, exchanges, off-ramps and custodians.</p>
-                {WAITLIST_URL && (
-                  <a className={s.btn} href={WAITLIST_URL} target="_blank" rel="noopener noreferrer">
-                    Join the waitlist
-                  </a>
-                )}
+                <p><b>Each deposit gets a Payment Passport that anyone can verify, ready before the next party asks.</b></p>
               </div>
             </div>
-            <LandingFlow />
+            <div className={cx("rule", "t")}><Logo h={22} /></div>
           </div>
+        </section>
 
-          <div className={s.pack} id="evidence">
-            <h2>Evidence pack</h2>
-            <div className={s.docs}>
-              {DOCS.map(([Icon, name, scope, detail]) => (
-                <article className={s.doc} key={name}>
-                  <div className={s["doc-h"]}>
-                    <Icon size={20} strokeWidth={1.5} aria-hidden />
-                    <span>{scope}</span>
+        <section className={s.how} id="how">
+          <div className={cx("wrap", "band")}>
+            <Head title="How it works">
+              Deflow sits between the payer and your pool. It collects the evidence; you decide; the contract executes.
+            </Head>
+            <div className={s["dg-box"]} tabIndex={0} aria-label="How Deflow works" data-scroll-region>
+              <div className={s.dg}>
+                <div className={s.lbl} style={{ gridColumn: "1 / 12", gridRow: 1, color: "var(--blue-700)" }}>Money path</div>
+                <Blk icon={User} label="Payer" bg="var(--blue-800)" at={[1, 2]} />
+                <Ar at={[2, 2]} blue />
+                <div className={s.contract} style={{ gridColumn: "3 / 8", gridRow: 2 }}>
+                  <div><span>Your contract</span><Lock size={16} strokeWidth={2} aria-hidden /></div>
+                  Waits for the evidence
+                </div>
+                <Ar at={[8, 2]} blue />
+                <div className={s.outs} style={{ gridColumn: "9 / 12", gridRow: 2 }}>
+                  {OUTS.map(([Icon, label, bg]) => (
+                    <div className={s.out} style={{ background: bg }} key={label}>
+                      <Icon size={14} strokeWidth={2} aria-hidden />{label}
+                    </div>
+                  ))}
+                </div>
+                <div className={s.rel} style={{ gridColumn: 7, gridRow: 3 }}><i /><span>Releases</span><i /></div>
+                <div className={s.lbl} style={{ gridColumn: "1 / 6", gridRow: 3, alignSelf: "end" }}>Evidence path</div>
+                <Blk icon={IdCard} label="Travel Rule" bg="var(--ink-800)" at={[1, 4]} />
+                {STEPS.map(([Icon, label, bg], i) => [
+                  <Ar at={[2 + i * 2, 4]} key={`a${label}`} />,
+                  <Blk icon={Icon} label={label} bg={bg} at={[3 + i * 2, 4]} key={label} />,
+                ])}
+                <Ar at={[10, 4]} />
+                <div className={s.recv} style={{ gridColumn: 11, gridRow: 4 }}>
+                  <div><Landmark size={14} strokeWidth={2} aria-hidden />Bank</div>
+                  <div><Scale size={14} strokeWidth={2} aria-hidden />Regulator</div>
+                </div>
+                <div className={s.note} style={{ gridColumn: "1 / 12", gridRow: 5 }}>
+                  Deflow holds no funds and signs no transactions.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={s.evidence} id="evidence">
+          <div className={cx("wrap", "band")}>
+            <Head title="Evidence pack">
+              Deflow does not claim funds are clean. It records which checks passed, under which rules, who decided and
+              what the contract executed.
+            </Head>
+            <div className={s.cards}>
+              {DOCS.map(([Icon, scope, name, detail, items], i) => (
+                <article className={s.card} key={name}>
+                  <div className={i === 0 ? cx("card-h", "blue") : s["card-h"]}>
+                    <div><span className={s.lbl}>{scope}</span><Icon size={20} strokeWidth={2} aria-hidden /></div>
+                    <h3>{name}</h3>
                   </div>
-                  <h3>{name}</h3>
-                  <p>{detail}</p>
+                  <div className={s["card-b"]}>
+                    <p>{detail}</p>
+                    <ul>
+                      {items.map((item) => (
+                        <li key={item}><Check size={14} strokeWidth={2} aria-hidden />{item}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className={s.sec} id="problem">
-          <div className={cx("wrap", "sec-h")}>
-            <h2>Problem</h2>
-            <table className={s.cmp}>
-              <thead>
-                <tr>
-                  <th className={s.lbl}>Today</th>
-                  <th className={s.lbl}>With Deflow</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PROBLEM.map(([today, withDeflow]) => (
-                  <tr key={today}>
-                    <td>{today}</td>
-                    <td>{withDeflow}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <section className={s.control} id="control">
+          <div className={cx("wrap", "band", "cols")} style={{ "--min": "320px" } as React.CSSProperties}>
+            <Head title="Keys and funds stay with you.">Deflow holds no funds and signs no transactions.</Head>
+            <div className={s.tiles}>
+              {CONTROL.map(([Icon, title, detail]) => (
+                <div className={s.tile} key={title}>
+                  <Icon size={20} strokeWidth={2} aria-hidden />
+                  <h3>{title}</h3>
+                  <p>{detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        <Section id="why" title="Why Deflow"><Points items={WHY} n={3} numbered /></Section>
-        <Section id="how" title="How it works"><Points items={HOW} n={2} /></Section>
-        <Section id="not" title="What Deflow does not claim"><Points items={NOT} n={2} ink /></Section>
+        <section className={s.pilot} id="pilot">
+          <div className={cx("wrap", "band", "cols")} style={{ "--min": "340px" } as React.CSSProperties}>
+            <Head title="Run it on real payments for 3–4 weeks.">
+              We connect one contract on testnet, then mainnet, and answer 2–3 real RFIs with Payment Passports.
+              <span className={s.stats}>
+                {STATS.map(([value, label]) => (
+                  <span key={value}><b>{value}</b>{label}</span>
+                ))}
+              </span>
+            </Head>
+            <div className={s.req}>
+              <h3>Request a pilot</h3>
+              <p>Tell us your work email, company and CASP licence country.</p>
+              {WAITLIST_URL && (
+                <a className={cx("btn", "lg")} href={WAITLIST_URL} target="_blank" rel="noopener noreferrer">
+                  Send request
+                </a>
+              )}
+              <small>We reply within one-two working days.</small>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className={s.ftr}>
         <div className={s.wrap}>
-          <Image src="/deflow-logo.png" alt="Deflow" width={71} height={18} />
-          <span>Evidence layer for stablecoin deposits</span>
+          <Logo h={22} />
+          <span>Not legal advice. Pilot terms are hypotheses. © 2026 Deflow</span>
         </div>
       </footer>
     </div>
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Head({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className={s.sec} id={id}>
-      <div className={cx("wrap", "sec-h")}>
-        <h2>{title}</h2>
-        {children}
-      </div>
-    </section>
+    <div className={s["s-h"]}>
+      <h2>{title}</h2>
+      <p>{children}</p>
+    </div>
   );
 }
 
-function Points({ items, n, numbered, ink }: { items: string[][]; n: number; numbered?: boolean; ink?: boolean }) {
+function Blk({ icon: Icon, label, bg, at }: { icon: LucideIcon; label: string; bg: string; at: [number, number] }) {
   return (
-    <div className={s.cols} style={{ "--n": n } as React.CSSProperties}>
-      {items.map(([title, detail], i) => (
-        <div className={ink ? cx("pt", "k") : s.pt} key={title}>
-          {numbered && <span className={s.fn}>{String(i + 1).padStart(2, "0")}</span>}
-          <h3>{title}</h3>
-          <p>{detail}</p>
-        </div>
-      ))}
+    <div className={s.blk} style={{ background: bg, gridColumn: at[0], gridRow: at[1], minHeight: at[0] === 1 ? 76 : undefined }}>
+      <Icon size={16} strokeWidth={2} aria-hidden />
+      {label}
     </div>
   );
+}
+
+function Ar({ at, blue }: { at: [number, number]; blue?: boolean }) {
+  return <div className={blue ? cx("ar", "blue") : s.ar} style={{ gridColumn: at[0], gridRow: at[1] }} aria-hidden />;
 }
