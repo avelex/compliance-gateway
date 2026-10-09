@@ -36,6 +36,7 @@
 .root :focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .wrap { max-width: 1280px; margin: 0 auto; padding-left: clamp(16px, 4vw, 48px); padding-right: clamp(16px, 4vw, 48px); }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .lbl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
 .mono { font-family: var(--font-mono); font-size: 12px; }
 
@@ -136,7 +137,7 @@
 .outs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .out { border-radius: var(--radius-2); padding: 6px 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--white); }
 .recv { display: flex; flex-direction: column; gap: 4px; }
-.recv > div { flex: 1; border: 2px solid var(--ink-950); border-radius: var(--radius-2); padding: 4px 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.recv > div { flex: 1; border: 2px solid var(--ink-950); border-radius: var(--radius-2); padding: 2px 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
 .rel { display: flex; flex-direction: column; align-items: center; padding: 4px 0; }
 .rel::before { content: ""; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--blue-500); }
 .rel > i { width: 2px; height: 6px; background: var(--blue-500); }

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Schibsted_Grotesk } from "next/font/google";
 import {
+  ArrowLeftRight,
   Check,
   Download,
   FileCheck2,
@@ -142,16 +143,21 @@ export default function Landing() {
         <section className={s.how} id="how">
           <div className={cx("wrap", "band")}>
             <Head title="How it works">
-              Deflow sits between the payer and your pool. It collects the evidence; you decide; the contract executes.
+              Each payment waits in your contract while Deflow collects the evidence. You decide, and the contract executes only what you signed.
             </Head>
-            <div className={s["dg-box"]} tabIndex={0} aria-label="How Deflow works" data-scroll-region>
-              <div className={s.dg}>
+            <div className={s["dg-box"]} tabIndex={0} role="region" aria-label="How Deflow works" data-scroll-region>
+              <p className={s.sr}>
+                Money path: the payer pays into your contract, which holds the payment until you decide, then credits,
+                holds, freezes or returns it. Evidence path: Travel Rule data, checks, your rules, your signed decision,
+                which instructs the contract, and a Payment Passport for the off-ramp, the bank and the regulator.
+              </p>
+              <div className={s.dg} aria-hidden>
                 <div className={s.lbl} style={{ gridColumn: "1 / 12", gridRow: 1, color: "var(--blue-700)" }}>Money path</div>
                 <Blk icon={User} label="Payer" bg="var(--blue-800)" at={[1, 2]} />
                 <Ar at={[2, 2]} blue />
                 <div className={s.contract} style={{ gridColumn: "3 / 8", gridRow: 2 }}>
                   <div><span>Your contract</span><Lock size={16} strokeWidth={2} aria-hidden /></div>
-                  Waits for the evidence
+                  Holds the payment until you decide
                 </div>
                 <Ar at={[8, 2]} blue />
                 <div className={s.outs} style={{ gridColumn: "9 / 12", gridRow: 2 }}>
@@ -161,7 +167,7 @@ export default function Landing() {
                     </div>
                   ))}
                 </div>
-                <div className={s.rel} style={{ gridColumn: 7, gridRow: 3 }}><i /><span>Releases</span><i /></div>
+                <div className={s.rel} style={{ gridColumn: 7, gridRow: 3 }}><i /><span>Instructs</span><i /></div>
                 <div className={s.lbl} style={{ gridColumn: "1 / 6", gridRow: 3, alignSelf: "end" }}>Evidence path</div>
                 <Blk icon={IdCard} label="Travel Rule" bg="var(--ink-800)" at={[1, 4]} />
                 {STEPS.map(([Icon, label, bg], i) => [
@@ -170,6 +176,7 @@ export default function Landing() {
                 ])}
                 <Ar at={[10, 4]} />
                 <div className={s.recv} style={{ gridColumn: 11, gridRow: 4 }}>
+                  <div><ArrowLeftRight size={14} strokeWidth={2} aria-hidden />Off-ramp</div>
                   <div><Landmark size={14} strokeWidth={2} aria-hidden />Bank</div>
                   <div><Scale size={14} strokeWidth={2} aria-hidden />Regulator</div>
                 </div>
