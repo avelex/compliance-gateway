@@ -64,6 +64,9 @@ func TestPackVersionsKeepEvidenceRootAndChain(t *testing.T) {
 	if v1.Salts["timeline.offchain.0.event"] != v2.Salts["timeline.offchain.0.event"] {
 		t.Fatal("salt of an unchanged path was not reused")
 	}
+	if v1.Salts["decision.decision"] == v2.Salts["decision.decision"] {
+		t.Fatal("decision salt reused across versions")
+	}
 	if v2.PrevPackHash != v1.PackHash {
 		t.Fatal("journal does not chain")
 	}

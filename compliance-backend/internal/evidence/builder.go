@@ -61,7 +61,9 @@ type Pack struct {
 
 // BuildPack assembles pack version n from the snapshot plus the non-evidence sections (timeline,
 // decision, ...). Salts from prevSalts are reused for paths that still exist, so the evidence_root
-// stays the snapshot's and unchanged sections keep their hashes; new leaves get fresh salts.
+// stays the snapshot's and unchanged sections keep their hashes; new leaves get fresh salts. The decision
+// section is salted afresh in every version: with a reused salt, a recipient holding two copies could
+// see whether a withheld decision field (return_blocked: a freeze) changed between them.
 func BuildPack(snap *Snapshot, version int, rest map[string]any, prevSalts map[string]string, prevPackHash string, signer *JWSSigner) (*Pack, error) {
 	rest, err := normalize(rest)
 	if err != nil {
@@ -89,7 +91,9 @@ func BuildPack(snap *Snapshot, version int, rest map[string]any, prevSalts map[s
 		if _, ev := snap.Data[k]; ev {
 			continue
 		}
-		carry(v, prevSalts, salts, k)
+		if k != "decision" {
+			carry(v, prevSalts, salts, k)
+		}
 		Salt(v, salts, k)
 	}
 	master, err := MasterRoot(data, salts)

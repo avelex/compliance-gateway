@@ -32,3 +32,25 @@ var offRamp = []string{
 	"decision.officer_id", "decision.second_reviewer", "decision.return_blocked",
 	"retention.legal_hold",
 }
+
+// RefusedProfiles lists the profiles a copy of p must not be issued for, each with the reason. An off-ramp
+// or bank copy of a pack whose decision is FREEZE, or whose sanctions screening is a true match, would tell
+// that recipient the payment is frozen or under investigation (tipping-off); the MLRO handles those requests
+// outside a recipient copy. It guards against a mistaken profile, not against a caller who labels a copy
+// for the wrong recipient; the projection log is the control for that.
+func RefusedProfiles(p *Pack) map[string]string {
+	field := func(section, key string) any {
+		m, _ := p.Data[section].(map[string]any)
+		return m[key]
+	}
+	var why string
+	switch {
+	case field("decision", "decision") == "FREEZE":
+		why = "the payment is frozen; off-ramp and bank requests go to the MLRO"
+	case field("sanctions", "result") == "TRUE_MATCH":
+		why = "sanctions screening is a true match; off-ramp and bank requests go to the MLRO"
+	default:
+		return map[string]string{}
+	}
+	return map[string]string{"OFF_RAMP": why, "BANK": why}
+}

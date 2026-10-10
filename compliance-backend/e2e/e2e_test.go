@@ -258,6 +258,12 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("freeze: %v", frozen)
 	}
 
+	frozenPack := payment(sanctionedRef)["packs"].([]any)[0].(map[string]any)["pack_id"].(string)
+	if code, body := svc.call("POST", "/v1/packs/"+frozenPack+"/projections", map[string]any{"profile": "OFF_RAMP",
+		"prepared_for": "Example Exchange", "purpose": "Source-of-funds request"}); code != 409 {
+		t.Fatalf("OFF_RAMP copy of a frozen payment: %d %s", code, body)
+	}
+
 	packs := payment(cleanRef)["packs"].([]any)
 	packID := packs[0].(map[string]any)["pack_id"].(string)
 	code, proj := svc.call("POST", "/v1/packs/"+packID+"/projections", map[string]any{"profile": "OFF_RAMP",

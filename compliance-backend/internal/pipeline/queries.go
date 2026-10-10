@@ -186,6 +186,11 @@ func (p *Pipeline) Project(ctx context.Context, packID string, r evidence.Recipi
 	if err != nil {
 		return nil, err
 	}
+	// ponytail: no lock on the latest version; a FREEZE landing before the INSERT yields a copy of the
+	// previous version that does not reveal it. Lock the payment row if copies must match the latest decision.
+	if why, refused := evidence.RefusedProfiles(pk)[r.Profile]; refused {
+		return nil, fmt.Errorf("%w: %s copy refused: %s", ErrConflict, r.Profile, why)
+	}
 	copy, err := evidence.Project(pk, r, p.now())
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBadRequest, err)

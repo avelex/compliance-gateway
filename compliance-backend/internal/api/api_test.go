@@ -141,14 +141,25 @@ func TestOfficerFreezeThroughAPI(t *testing.T) {
 		t.Fatalf("RETURN after FREEZE: %d", code)
 	}
 
-	code, proj := c.do("POST", "/v1/packs/"+packID+"/projections", map[string]any{"profile": "OFF_RAMP",
-		"prepared_for": "Example Exchange", "purpose": "Source-of-funds request"}, token)
-	if code != 201 || proj["profile"] != "OFF_RAMP" || proj["prepared_for"] != "Example Exchange" {
+	for _, profile := range []string{"OFF_RAMP", "BANK"} {
+		if code, _ := c.do("POST", "/v1/packs/"+packID+"/projections", map[string]any{"profile": profile,
+			"prepared_for": "Example Exchange", "purpose": "Source-of-funds request"}, token); code != 409 {
+			t.Fatalf("%s copy of a frozen payment: %d", profile, code)
+		}
+	}
+	refused := -1
+	if err := f.P.St.QueryRow(context.Background(), `SELECT count(*) FROM projection WHERE pack_id = $1::uuid`, packID).Scan(&refused); err != nil || refused != 0 {
+		t.Fatalf("refused copies were logged: %d %v", refused, err)
+	}
+
+	code, proj := c.do("POST", "/v1/packs/"+packID+"/projections", map[string]any{"profile": "FIU_SUPERVISOR",
+		"prepared_for": "Example FIU", "purpose": "Suspicious transaction report"}, token)
+	if code != 201 || proj["profile"] != "FIU_SUPERVISOR" || proj["prepared_for"] != "Example FIU" {
 		t.Fatalf("projection: %d %v", code, proj)
 	}
 	var who, why, hash string
 	f.P.St.QueryRow(context.Background(), `SELECT prepared_for, purpose, projection_hash FROM projection WHERE pack_id = $1::uuid`, packID).Scan(&who, &why, &hash)
-	if who != "Example Exchange" || why != "Source-of-funds request" || hash != proj["integrity"].(map[string]any)["projection_hash"] {
+	if who != "Example FIU" || why != "Suspicious transaction report" || hash != proj["integrity"].(map[string]any)["projection_hash"] {
 		t.Fatalf("projection log: %q %q %q", who, why, hash)
 	}
 	if code, _ := c.do("POST", "/v1/packs/"+packID+"/projections", map[string]any{"profile": "PRESS", "prepared_for": "x", "purpose": "y"}, token); code != 400 {
@@ -159,5 +170,81 @@ func TestOfficerFreezeThroughAPI(t *testing.T) {
 	}
 	if code, _ := c.do("GET", "/v1/payments/"+common.Hash{9}.Hex(), nil, token); code != 404 {
 		t.Fatalf("unknown payment: %d", code)
+	}
+}
+
+// officerDecides signs kind for ref with the fixture officer through the API and returns the new pack id.
+func officerDecides(t *testing.T, f *pipelinetest.Fixture, c client, ref, kind string) string {
+	t.Helper()
+	code, td := c.do("GET", "/v1/payments/"+ref+"/typed-data?decision="+kind, nil, token)
+	if code != 200 {
+		t.Fatalf("%s typed data: %d %v", kind, code, td)
+	}
+	sig := pipelinetest.SignTypedJSON(t, f.Officer, td)
+	code, out := c.do("POST", "/v1/payments/"+ref+"/decisions", map[string]any{"decision": kind,
+		"signature": hexutil.Encode(sig), "rationale": "test " + kind}, token)
+	if code != 201 {
+		t.Fatalf("%s: %d %v", kind, code, out)
+	}
+	return out["pack_id"].(string)
+}
+
+func offRampCopy(c client, packID string) (int, map[string]any) {
+	return c.do("POST", "/v1/packs/"+packID+"/projections", map[string]any{"profile": "OFF_RAMP",
+		"prepared_for": "Example Exchange", "purpose": "Source-of-funds request"}, token)
+}
+
+func TestOffRampRefusedOnSanctionsMatch(t *testing.T) {
+	f, c := setup(t)
+	f.ApproveExample(t)
+	hit := f.Deposit(t, f.Sanctioned, 30_000_000, "confirmed", 1) // SANC-01: a case without a pack
+	f.Tick(t)
+	packID := officerDecides(t, f, c, hit.Hex(), "HOLD")
+
+	if code, out := offRampCopy(c, packID); code != 409 {
+		t.Fatalf("OFF_RAMP copy of a held sanctions match: %d %v", code, out)
+	}
+	n := -1
+	if err := f.P.St.QueryRow(context.Background(), `SELECT count(*) FROM projection WHERE pack_id = $1::uuid`, packID).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("refused copy was logged: %d %v", n, err)
+	}
+}
+
+func TestOffRampAfterFreezeThenCredit(t *testing.T) {
+	f, c := setup(t)
+	f.ApproveExample(t)
+	risky := f.Deposit(t, f.Risky, 30_000_000, "confirmed", 1) // KYT-01: auto HOLD, pack v1
+	f.Tick(t)
+	ref := risky.Hex()
+	_, detail := c.do("GET", "/v1/payments/"+ref, nil, token)
+	packID := detail["packs"].([]any)[0].(map[string]any)["pack_id"].(string)
+
+	code, v1 := offRampCopy(c, packID)
+	if code != 201 {
+		t.Fatalf("OFF_RAMP copy of v1: %d %v", code, v1)
+	}
+	officerDecides(t, f, c, ref, "FREEZE")
+	officerDecides(t, f, c, ref, "CREDIT")
+
+	code, v3 := offRampCopy(c, packID)
+	if code != 201 {
+		t.Fatalf("OFF_RAMP copy after FREEZE then CREDIT: %d %v", code, v3)
+	}
+	data := v3["data"].(map[string]any)
+	dec := data["decision"].(map[string]any)
+	if dec["decision"] != "CREDIT" {
+		t.Fatalf("decision: %v", dec["decision"])
+	}
+	withheld := func(v any) string {
+		m, _ := v.(map[string]any)
+		h, _ := m["$withheld"].(string)
+		return h
+	}
+	if withheld(data["timeline"].(map[string]any)["offchain"]) == "" || withheld(dec["return_blocked"]) == "" {
+		t.Fatalf("offchain timeline or return_blocked not withheld: %v", data)
+	}
+	before := withheld(v1["data"].(map[string]any)["decision"].(map[string]any)["return_blocked"])
+	if before == "" || before == withheld(dec["return_blocked"]) {
+		t.Fatalf("return_blocked hashes comparable across versions: %q", before)
 	}
 }

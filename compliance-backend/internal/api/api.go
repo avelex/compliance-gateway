@@ -214,6 +214,11 @@ func (s *Server) project(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	copy, err := s.P.Project(r.Context(), r.PathValue("pack_id"), evidence.Recipient{Profile: body.Profile, PreparedFor: body.PreparedFor, Purpose: body.Purpose})
+	if errors.Is(err, pipeline.ErrConflict) {
+		// Not a disclosure, so no projection record; the service log keeps the attempt traceable.
+		s.P.Log.Warn("projection refused", "pack_id", r.PathValue("pack_id"), "profile", body.Profile,
+			"prepared_for", body.PreparedFor, "issuer", "api-token")
+	}
 	if err != nil {
 		failErr(w, err)
 		return

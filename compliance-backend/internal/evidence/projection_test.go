@@ -102,3 +102,24 @@ func TestVerifierAcceptsProjectionJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestRefusedProfiles(t *testing.T) {
+	for _, tc := range []struct {
+		name, decision, sanctions string
+		refused                   bool
+	}{
+		{"frozen", "FREEZE", "NO_MATCH", true},
+		{"held on a sanctions match", "HOLD", "TRUE_MATCH", true},
+		{"credited after a freeze", "CREDIT", "NO_MATCH", false},
+		{"held", "HOLD", "NO_MATCH", false},
+	} {
+		p := &Pack{Data: map[string]any{
+			"decision":  map[string]any{"decision": tc.decision},
+			"sanctions": map[string]any{"result": tc.sanctions},
+		}}
+		got := RefusedProfiles(p)
+		if tc.refused != (len(got) == 2 && got["OFF_RAMP"] != "" && got["BANK"] != "") || (!tc.refused && len(got) != 0) {
+			t.Errorf("%s: %v", tc.name, got)
+		}
+	}
+}

@@ -90,7 +90,7 @@ All endpoints except `/healthz` need `Authorization: Bearer <api_token>`. Errors
 | `POST /v1/payments/{ref}/decisions` | `{decision, signature, rationale}` returns `{pack_id, pack_version}` |
 | `POST /v1/rulesets?effective_from=RFC3339` | ruleset JSON body; returns `ruleset_hash` and the approval typed data |
 | `POST /v1/rulesets/{version}/approve` | `{effective_from, signature}` by an MLRO; the ruleset is immutable from then on |
-| `POST /v1/packs/{pack_id}/projections` | `{profile, prepared_for, purpose}` returns the canonical projection JSON; every issue is logged |
+| `POST /v1/packs/{pack_id}/projections` | `{profile, prepared_for, purpose}` returns the canonical projection JSON; every issue is logged. `OFF_RAMP` and `BANK` are refused with `409` when the latest pack version records a `FREEZE` decision or a sanctions `TRUE_MATCH` (tipping-off); such requests go to the MLRO. A refusal is not logged as a disclosure, only as a service-log warning |
 
 Profiles: `MASTER`, `FIU_SUPERVISOR` (nothing withheld), `AUDITOR`, `OFF_RAMP`, `BANK`.
 
