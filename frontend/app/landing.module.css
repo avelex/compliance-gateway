@@ -68,11 +68,11 @@
 
 /* Hero */
 .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 48px; align-items: center; padding-top: 72px; padding-bottom: 104px; }
-.copy { display: flex; flex-direction: column; gap: 20px; }
-.hero h1 { margin: 0; font-size: clamp(36px, 3.6vw, 50px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; text-wrap: balance; }
-.lead { margin: 0; font-size: 17px; line-height: 1.5; text-wrap: pretty; }
-.aud { margin: 0; font-size: 13px; }
-.ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.copy { display: flex; flex-direction: column; gap: 24px; }
+.hero h1 { margin: 0; font-size: min(66px, 11vw); line-height: .98; letter-spacing: -0.04em; font-weight: 700; text-wrap: balance; }
+.lead { margin: 0; max-width: 36ch; font-size: 19px; line-height: 1.45; color: var(--ink-800); text-wrap: pretty; }
+.lead b { color: var(--ink-950); font-weight: 600; }
+.ctas { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 4px; }
 .specimens { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-700); }
 .specimens a { color: var(--blue-700); text-decoration: underline; text-underline-offset: 3px; }
 .specimens a:hover { color: var(--blue-500); }

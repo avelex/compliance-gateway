@@ -55,7 +55,7 @@ const SPECIMENS = [
 function Specimens() {
   return (
     <p className={s.specimens}>
-      <span>Specimens, fictional data:</span>
+      <span>Specimens:</span>
       {SPECIMENS.map(([label, href]) => (
         <a key={href} href={href} target="_blank" rel="noopener">{label}</a>
       ))}
@@ -113,7 +113,6 @@ export default function Landing() {
     <div className={`${schibsted.variable} ${s.root}`}>
       <a href="#main" className={s.skip}>Skip to content</a>
       <header>
-        <div className={s.stripe} aria-hidden><div /><div /><div /></div>
         <div className={s.hdr}>
           <div className={s.wrap}>
             <Link href="/" aria-label="Deflow home"><Logo h={28} /></Link>
@@ -135,11 +134,9 @@ export default function Landing() {
           <div className={s.copy}>
             <h1>A proof for every deposit and every withdrawal.</h1>
             <p className={s.lead}>
-              Deflow is an evidence layer for stablecoin deposits.
-              <br />
-              It gives regulated crypto businesses a signed proof of how each deposit was checked and decided.
+              <b>Deflow is an evidence layer for stablecoin deposits.</b> It gives regulated crypto businesses a signed
+              proof of how each deposit was checked and decided.
             </p>
-            <p className={s.aud}>For processors, exchanges, off-ramps and custodians.</p>
             <div className={s.ctas}>
               {REQUEST_HREF && <a href="#pilot" className={cx("btn", "lg")}>Request a pilot</a>}
               <a href="#how" className={cx("btn", "lg", "sec")}>How it works</a>
