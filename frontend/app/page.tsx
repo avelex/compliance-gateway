@@ -21,7 +21,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { LandingPassport } from "@/components/landing-passport";
+import { LandingChat } from "@/components/landing-chat";
 import s from "./landing.module.css";
 
 export const metadata: Metadata = {
@@ -139,7 +139,7 @@ export default function Landing() {
             </div>
             <Specimens />
           </div>
-          <LandingPassport />
+          <LandingChat />
         </section>
 
         <section className={s.manifest} id="manifest">
