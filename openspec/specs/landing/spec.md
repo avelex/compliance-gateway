@@ -28,7 +28,7 @@ The landing page SHALL state the promise: a proof for every deposit and every wi
 - **THEN** it states that the decision is signed by the merchant's officer or by the merchant's policy key under rules the MLRO approved, and that Deflow neither signs transactions nor holds funds
 
 ### Requirement: Three proofs listed
-The landing page SHALL name the three proofs of the evidence pack, each with its scope: Payment Passport (per deposit), Settlement Manifest (per withdrawal), and Audit Export (per period). Each proof SHALL list what it contains. The Payment Passport SHALL state that each recipient sees what its profile allows.
+The landing page SHALL name the three proofs of the evidence bundle, each with its scope: Payment Passport (per deposit), Settlement Manifest (per withdrawal), and Audit Export (per period). Each proof SHALL list what it contains. The Payment Passport SHALL state that each recipient sees what its profile allows.
 
 #### Scenario: Proofs present
 - **WHEN** the landing page renders
@@ -102,11 +102,11 @@ The landing page SHALL use the Deflow brand system: Schibsted Grotesk and IBM Pl
 - **THEN** the headline is set in Schibsted Grotesk and the header shows the `deflow.` logo with alt text "Deflow"
 
 ### Requirement: Landing sections
-Below the hero, the landing page SHALL show, in this order: Manifest, How it works, Evidence pack, Control ("Keys and funds stay with you."), and Pilot ("Run it on real payments for 3–4 weeks.").
+Below the hero, the landing page SHALL show, in this order: Manifest, How it works, Evidence bundle, Control ("Keys and funds stay with you."), and Pilot ("Run it on real payments for 3–4 weeks.").
 
 #### Scenario: Sections present
 - **WHEN** the visitor scrolls past the hero
-- **THEN** the Manifest, How it works, Evidence pack, Control, and Pilot sections appear in that order
+- **THEN** the Manifest, How it works, Evidence bundle, Control, and Pilot sections appear in that order
 
 ### Requirement: Payment Passport specimens in the hero
 The hero SHALL show, under the "Request a pilot" and "How it works" buttons, a link to each Payment Passport specimen: the credited off-ramp copy and the frozen FIU copy. Each link SHALL open the PDF in a new tab, and the pair SHALL be labelled as specimens with fictional data.
@@ -119,15 +119,15 @@ The hero SHALL show, under the "Request a pilot" and "How it works" buttons, a l
 - **WHEN** a visitor clicks a hero specimen link
 - **THEN** the matching PDF opens in a new tab and the landing page stays open
 
-### Requirement: Payment Passport specimens in the Evidence pack
-The Payment Passport card in the Evidence pack section SHALL offer the same two specimen links, opening in a new tab. The Settlement Manifest and Audit Export cards SHALL NOT show specimen links.
+### Requirement: Payment Passport specimens in the Evidence bundle
+The Payment Passport card in the Evidence bundle section SHALL offer the same two specimen links, opening in a new tab. The Settlement Manifest and Audit Export cards SHALL NOT show specimen links.
 
 #### Scenario: Card shows both specimens
-- **WHEN** the visitor reaches the Evidence pack section
+- **WHEN** the visitor reaches the Evidence bundle section
 - **THEN** the Payment Passport card contains links to the credited and the frozen specimen
 
 #### Scenario: Other cards unchanged
-- **WHEN** the Evidence pack section renders
+- **WHEN** the Evidence bundle section renders
 - **THEN** the Settlement Manifest and Audit Export cards contain no specimen link
 
 ### Requirement: Specimen links are accessible and do not break layout

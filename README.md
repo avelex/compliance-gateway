@@ -54,7 +54,7 @@ deposit --> checks ----------> your rules -------> decision ---------------> Pay
 - **Without contracts.** Funds move as they do today. Deflow watches deposits to your addresses, runs the checks, applies your rules, records the decisions and issues a Payment Passport for each deposit.
 - **With contracts.** Adds a hold before credit. Each payer gets a personal deposit address, a smart contract that you own. The money waits there until your signed decision, and it can only go to your pool or back to the payer. Deflow only delivers your decision on-chain; it cannot forge one.
 
-## Evidence pack
+## Evidence bundle
 
 | Proof | Scope | Contents |
 |---|---|---|

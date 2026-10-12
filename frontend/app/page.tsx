@@ -84,6 +84,13 @@ const DOCS: [LucideIcon, string, string, string, string[]][] = [
   [Download, "Per period", "Audit Export", "Every decision in a period with the rule versions behind it, so your auditor can reproduce the logic.",
     ["All passports and decisions", "Policy changes", "Holds, freezes and returns"]],
 ];
+const FLOW: [string, string][] = [
+  ["Travel Rule", "Checkout collects payer data and a wallet signature before funds move."],
+  ["Checks", "Your KYT, sanctions and structuring screens run on the held payment."],
+  ["Your rules", "Policy versions you approve decide which outcome applies."],
+  ["Signed decision", "You sign with your own key. The contract executes only that."],
+  ["Payment Passport", "One document per payment, ready for a bank or regulator."],
+];
 const CONTROL: [LucideIcon, string, string][] = [
   [Lock, "Your contract", "Deployed per payer and owned by you."],
   [KeyRound, "Your key", "Every decision is signed by your officer, or by your policy key under rules your MLRO approved."],
@@ -163,7 +170,7 @@ export default function Landing() {
         <section className={s.how} id="how">
           <div className={cx("wrap", "band")}>
             <Head title="How it works">
-              Each payment waits in your contract while Deflow collects the evidence. You decide, and the contract executes only what you signed.
+              Today an RFI answer is assembled by hand from five systems. Here each payment is checked, decided and documented while it waits in your contract, so the Payment Passport is ready when the question arrives.
             </Head>
             <p className={s.swipe} aria-hidden>Scroll sideways to see the full flow.</p>
             <div className={s["dg-box"]} tabIndex={0} role="region" aria-label="How Deflow works" data-scroll-region>
@@ -201,17 +208,23 @@ export default function Landing() {
                   <div><Landmark size={14} strokeWidth={2} aria-hidden />Bank</div>
                   <div><Scale size={14} strokeWidth={2} aria-hidden />Regulator</div>
                 </div>
-                <div className={s.note} style={{ gridColumn: "1 / 12", gridRow: 5 }}>
-                  Deflow holds no funds and signs no transactions.
-                </div>
               </div>
             </div>
+            <ol className={s.steps}>
+              {FLOW.map(([title, detail], i) => (
+                <li key={title} className={i === 3 ? cx("step", "hi") : s.step}>
+                  <span className={s.mono}>{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{title}</h3>
+                  <p>{detail}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
         <section className={s.evidence} id="evidence">
           <div className={cx("wrap", "band")}>
-            <Head title="Evidence pack">
+            <Head title="Evidence bundle">
               Deflow does not claim funds are clean. It records which checks ran, under which rules, who decided and
               what the contract executed.
             </Head>
@@ -304,7 +317,7 @@ function Head({ title, children }: { title: string; children: React.ReactNode })
 
 function Blk({ icon: Icon, label, bg, at }: { icon: LucideIcon; label: string; bg: string; at: [number, number] }) {
   return (
-    <div className={s.blk} style={{ background: bg, gridColumn: at[0], gridRow: at[1], minHeight: at[0] === 1 ? 76 : undefined }}>
+    <div className={s.blk} style={{ background: bg, gridColumn: at[0], gridRow: at[1], minHeight: at[0] === 1 ? 112 : undefined }}>
       <Icon size={16} strokeWidth={2} aria-hidden />
       {label}
     </div>
